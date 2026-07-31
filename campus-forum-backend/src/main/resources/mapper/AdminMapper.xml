@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    AdminMapper XML
+    namespace 必须与 AdminMapper 接口全限定名一致
+    resultType 使用全限定名（VO 不在 type-aliases-package 中）
+-->
+<mapper namespace="com.campus.forum.mapper.AdminMapper">
+
+    <!--
+        管理员帖子分页列表
+        - 联表 user 与 section
+        - 不限制 status 与 deleted，管理员可查看全部帖子（含已删除/草稿）
+        - 动态条件：keyword（标题模糊）、sectionId（板块）、status（状态）
+        - 排序：按 create_time 倒序
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectAdminPostList" resultType="com.campus.forum.dto.resp.PostListVO">
+        SELECT
+            p.id              AS id,
+            p.title           AS title,
+            p.summary         AS summary,
+            p.user_id         AS userId,
+            u.username        AS username,
+            u.avatar          AS userAvatar,
+            p.section_id      AS sectionId,
+            s.name            AS sectionName,
+            p.view_count      AS viewCount,
+            p.like_count      AS likeCount,
+            p.comment_count   AS commentCount,
+            p.favorite_count  AS favoriteCount,
+            p.is_top          AS isTop,
+            p.is_essence      AS isEssence,
+            p.create_time     AS createTime
+        FROM post p
+        LEFT JOIN user u    ON p.user_id = u.id
+        LEFT JOIN section s ON p.section_id = s.id
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND p.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="sectionId != null">
+            AND p.section_id = #{sectionId}
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        ORDER BY p.create_time DESC
+    </select>
+
+</mapper>

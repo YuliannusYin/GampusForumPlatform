@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    CommentMapper XML
+    namespace 必须与 CommentMapper 接口全限定名一致
+    resultType 使用全限定名（VO 不在 type-aliases-package 中）
+-->
+<mapper namespace="com.campus.forum.mapper.CommentMapper">
+
+    <!--
+        分页查询某帖子的顶级评论
+        - 联表 user 获取评论者用户名（username）与头像（userAvatar）
+        - 仅查询 parent_id=0（顶级评论）且 status=0（正常）且 deleted=0 的评论
+        - replyCount 通过子查询统计该评论的子回复数（parent_id=c.id 且 status=0 且 deleted=0）
+        - 排序：按 create_time 倒序
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectCommentsByPostId" resultType="com.campus.forum.dto.resp.CommentVO">
+        SELECT
+            c.id          AS id,
+            c.post_id     AS postId,
+            c.user_id     AS userId,
+            u.username    AS username,
+            u.avatar      AS userAvatar,
+            c.parent_id   AS parentId,
+            c.content     AS content,
+            c.like_count  AS likeCount,
+            (
+                SELECT COUNT(1)
+                FROM comment sub
+                WHERE sub.parent_id = c.id
+                  AND sub.status = 0
+                  AND sub.deleted = 0
+            )             AS replyCount,
+            c.create_time AS createTime
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id AND u.deleted = 0
+        WHERE c.deleted = 0
+          AND c.status = 0
+          AND c.parent_id = 0
+          AND c.post_id = #{postId}
+        ORDER BY c.create_time DESC
+    </select>
+
+    <!--
+        分页查询某评论的回复
+        - 联表 user 获取回复者用户名（username）与头像（userAvatar）
+        - 仅查询 parent_id=#{parentId} 且 status=0（正常）且 deleted=0 的回复
+        - replyCount 通过子查询统计（回复一般无子回复，通常为 0）
+        - 排序：按 create_time 正序（楼层顺序）
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectRepliesByParentId" resultType="com.campus.forum.dto.resp.CommentVO">
+        SELECT
+            c.id          AS id,
+            c.post_id     AS postId,
+            c.user_id     AS userId,
+            u.username    AS username,
+            u.avatar      AS userAvatar,
+            c.parent_id   AS parentId,
+            c.content     AS content,
+            c.like_count  AS likeCount,
+            (
+                SELECT COUNT(1)
+                FROM comment sub
+                WHERE sub.parent_id = c.id
+                  AND sub.status = 0
+                  AND sub.deleted = 0
+            )             AS replyCount,
+            c.create_time AS createTime
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id AND u.deleted = 0
+        WHERE c.deleted = 0
+          AND c.status = 0
+          AND c.parent_id = #{parentId}
+        ORDER BY c.create_time ASC
+    </select>
+
+</mapper>
