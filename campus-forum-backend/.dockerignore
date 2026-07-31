@@ -1,0 +1,10 @@
+# 后端 Docker 构建忽略列表
+target
+.git
+.gitignore
+*.log
+.dockerignore
+Dockerfile
+.idea
+.vscode
+*.iml

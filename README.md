@@ -124,6 +124,20 @@ npm run dev
 
 ## Docker 部署方式
 
+### 环境变量准备
+
+部署前需先准备环境变量文件。项目根目录提供了 `.env.docker` 模板（可提交到 git，不含真实密码），请先复制为 `.env` 再使用：
+
+```bash
+# Windows (PowerShell)
+Copy-Item .env.docker .env
+
+# Linux / macOS
+cp .env.docker .env
+```
+
+> 注意：`.env` 文件包含敏感信息，已被 `.gitignore` 忽略，请勿提交到仓库。请根据实际生产环境修改其中的 `MYSQL_*` 与 `JWT_SECRET` 等配置项。docker compose 会自动加载同目录下的 `.env` 文件，无需手动指定。
+
 ### 构建与启动
 
 使用 Docker Compose 一键编排后端、前端、MySQL、Redis 服务：

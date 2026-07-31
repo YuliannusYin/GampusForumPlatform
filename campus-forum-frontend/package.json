@@ -16,7 +16,9 @@
     "@element-plus/icons-vue": "^2.3.0",
     "axios": "^1.6.0",
     "md-editor-v3": "^4.0.0",
-    "echarts": "^5.5.0"
+    "echarts": "^5.5.0",
+    "sockjs-client": "^1.6.1",
+    "@stomp/stompjs": "^7.0.0"
   },
   "devDependencies": {
     "vite": "^5.2.0",

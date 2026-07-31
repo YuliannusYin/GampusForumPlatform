@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    PostMapper XML
+    namespace 必须与 PostMapper 接口全限定名一致
+    resultType 使用全限定名（VO 不在 type-aliases-package 中）
+-->
+<mapper namespace="com.campus.forum.mapper.PostMapper">
+
+    <!--
+        分页查询帖子列表
+        - 联表 user 与 section
+        - 仅查询 status=0（已发布）且 deleted=0 的帖子
+        - 动态条件：sectionId 不为空时按板块过滤
+        - 排序：置顶帖 is_top=1 始终优先；latest 按 create_time 倒序；hot 按 (like_count + comment_count*2 + view_count/10) 倒序
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectPostList" resultType="com.campus.forum.dto.resp.PostListVO">
+        SELECT
+            p.id              AS id,
+            p.title           AS title,
+            p.summary         AS summary,
+            p.user_id         AS userId,
+            u.username        AS username,
+            u.avatar          AS userAvatar,
+            p.section_id      AS sectionId,
+            s.name            AS sectionName,
+            p.view_count      AS viewCount,
+            p.like_count      AS likeCount,
+            p.comment_count   AS commentCount,
+            p.favorite_count  AS favoriteCount,
+            p.is_top          AS isTop,
+            p.is_essence      AS isEssence,
+            p.create_time     AS createTime
+        FROM post p
+        LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
+        LEFT JOIN section s ON p.section_id = s.id AND s.deleted = 0
+        WHERE p.deleted = 0
+          AND p.status = 0
+        <if test="sectionId != null">
+            AND p.section_id = #{sectionId}
+        </if>
+        <choose>
+            <when test="sort != null and sort == 'hot'">
+                ORDER BY p.is_top DESC,
+                         (p.like_count + p.comment_count * 2 + p.view_count / 10) DESC,
+                         p.create_time DESC
+            </when>
+            <otherwise>
+                ORDER BY p.is_top DESC, p.create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!--
+        关键词搜索帖子
+        - 联表 user 与 section（与 selectPostList 一致）
+        - 关键词匹配标题 / 正文 / 作者用户名（LIKE 用 CONCAT 拼接，避免 SQL 注入）
+        - 仅查询 status=0（已发布）且 deleted=0 的帖子
+        - 可选筛选：sectionId（板块）、startTime（起始时间）、endTime（截止时间），用 <if> 判断
+        - 排序：默认按 create_time 倒序
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectPostsByKeyword" resultType="com.campus.forum.dto.resp.PostListVO">
+        SELECT
+            p.id              AS id,
+            p.title           AS title,
+            p.summary         AS summary,
+            p.user_id         AS userId,
+            u.username        AS username,
+            u.avatar          AS userAvatar,
+            p.section_id      AS sectionId,
+            s.name            AS sectionName,
+            p.view_count      AS viewCount,
+            p.like_count      AS likeCount,
+            p.comment_count   AS commentCount,
+            p.favorite_count  AS favoriteCount,
+            p.is_top          AS isTop,
+            p.is_essence      AS isEssence,
+            p.create_time     AS createTime
+        FROM post p
+        LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
+        LEFT JOIN section s ON p.section_id = s.id AND s.deleted = 0
+        WHERE p.deleted = 0
+          AND p.status = 0
+          AND (p.title LIKE CONCAT('%', #{keyword}, '%')
+               OR p.content LIKE CONCAT('%', #{keyword}, '%')
+               OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+        <if test="sectionId != null">
+            AND p.section_id = #{sectionId}
+        </if>
+        <if test="startTime != null">
+            AND p.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND p.create_time &lt;= #{endTime}
+        </if>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <!--
+        查询帖子详情（含正文 content 与 updateTime）
+        - 联表 user 与 section
+        - 仅查询 deleted=0 的帖子
+    -->
+    <select id="selectPostDetail" resultType="com.campus.forum.dto.resp.PostDetailVO">
+        SELECT
+            p.id              AS id,
+            p.title           AS title,
+            p.summary         AS summary,
+            p.content         AS content,
+            p.user_id         AS userId,
+            u.username        AS username,
+            u.avatar          AS userAvatar,
+            p.section_id      AS sectionId,
+            s.name            AS sectionName,
+            p.view_count      AS viewCount,
+            p.like_count      AS likeCount,
+            p.comment_count   AS commentCount,
+            p.favorite_count  AS favoriteCount,
+            p.is_top          AS isTop,
+            p.is_essence      AS isEssence,
+            p.create_time     AS createTime,
+            p.update_time     AS updateTime
+        FROM post p
+        LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
+        LEFT JOIN section s ON p.section_id = s.id AND s.deleted = 0
+        WHERE p.deleted = 0
+          AND p.id = #{id}
+    </select>
+
+    <!--
+        按标签分页查询帖子列表
+        - 联表 user 与 section
+        - 通过 post_tag 联查，筛选出与指定 tagId 关联的帖子
+        - 仅查询 status=0（已发布）且 deleted=0 的帖子
+        - 排序按 create_time 倒序
+        - 分页由 MyBatis-Plus 分页插件自动添加 LIMIT，SQL 中不写 LIMIT
+    -->
+    <select id="selectPostsByTag" resultType="com.campus.forum.dto.resp.PostListVO">
+        SELECT
+            p.id              AS id,
+            p.title           AS title,
+            p.summary         AS summary,
+            p.user_id         AS userId,
+            u.username        AS username,
+            u.avatar          AS userAvatar,
+            p.section_id      AS sectionId,
+            s.name            AS sectionName,
+            p.view_count      AS viewCount,
+            p.like_count      AS likeCount,
+            p.comment_count   AS commentCount,
+            p.favorite_count  AS favoriteCount,
+            p.is_top          AS isTop,
+            p.is_essence      AS isEssence,
+            p.create_time     AS createTime
+        FROM post p
+        LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
+        LEFT JOIN section s ON p.section_id = s.id AND s.deleted = 0
+        WHERE p.deleted = 0
+          AND p.status = 0
+          AND p.id IN (
+              SELECT pt.post_id
+              FROM post_tag pt
+              WHERE pt.tag_id = #{tagId}
+                AND pt.deleted = 0
+          )
+        ORDER BY p.create_time DESC
+    </select>
+
+</mapper>
