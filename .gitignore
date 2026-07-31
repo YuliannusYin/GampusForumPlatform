@@ -1,0 +1,45 @@
+# ===== Java / Maven =====
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ===== IDE =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# ===== 前端 =====
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+
+# ===== 环境变量与敏感信息 =====
+.env
+.env.local
+.env.*.local
+
+# ===== 上传文件 =====
+uploads/
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+
+# ===== 进程文件 =====
+*.pid
+*.seed
+*.pid.lock
+
+# ===== 日志目录 =====
+logs/
