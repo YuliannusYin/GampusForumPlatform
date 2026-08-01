@@ -31,6 +31,10 @@
           <el-icon><PriceTag /></el-icon>
           <span>标签管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/clubs">
+          <el-icon><User /></el-icon>
+          <span>社团审核</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

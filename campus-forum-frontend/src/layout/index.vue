@@ -21,32 +21,38 @@
       </div>
 
       <div class="header-right">
-        <!-- 未读消息 -->
-        <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="header-icon">
-          <el-icon :size="20" @click="goNotification"><Bell /></el-icon>
-        </el-badge>
+        <!-- 未登录：显示登录/注册按钮 -->
+        <template v-if="!userStore.isLoggedIn">
+          <el-button text @click="goLogin">登录</el-button>
+          <el-button type="primary" @click="goRegister">注册</el-button>
+        </template>
 
-        <!-- 发帖按钮 -->
-        <el-button type="primary" :icon="EditPen" @click="goCreatePost">发帖</el-button>
+        <!-- 已登录：消息、发帖、用户下拉 -->
+        <template v-else>
+          <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="header-icon">
+            <el-icon :size="20" @click="goNotification"><Bell /></el-icon>
+          </el-badge>
 
-        <!-- 用户下拉菜单 -->
-        <el-dropdown trigger="click" @command="handleCommand">
-          <span class="user-dropdown">
-            <el-avatar :size="32" :src="avatar">{{ usernameInitial }}</el-avatar>
-            <span class="username">{{ displayName }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="posts">我的发帖</el-dropdown-item>
-              <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
-              <el-dropdown-item command="settings">设置</el-dropdown-item>
-              <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>后台管理</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+          <el-button type="primary" :icon="EditPen" @click="goCreatePost">发帖</el-button>
+
+          <el-dropdown trigger="click" @command="handleCommand">
+            <span class="user-dropdown">
+              <el-avatar :size="32" :src="avatar">{{ usernameInitial }}</el-avatar>
+              <span class="username">{{ displayName }}</span>
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="posts">我的发帖</el-dropdown-item>
+                <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
+                <el-dropdown-item command="settings">设置</el-dropdown-item>
+                <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>后台管理</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
       </div>
     </el-header>
 
@@ -144,6 +150,16 @@ const goClubs = () => {
   router.push('/club')
 }
 
+// 跳转登录页（用户主动选择）
+const goLogin = () => {
+  router.push('/login')
+}
+
+// 跳转注册页
+const goRegister = () => {
+  router.push('/register')
+}
+
 // 板块选择：跳转对应板块页或首页
 const handleSectionSelect = (index) => {
   // 社团菜单项由 @click=goClubs 单独处理，这里直接跳过
@@ -197,7 +213,9 @@ const handleCommand = (command) => {
 // 退出登录
 const handleLogout = () => {
   userStore.logout()
-  router.push('/login')
+  ElMessage.success('已退出登录')
+  // 不跳转登录页，回到首页
+  router.push('/home')
 }
 </script>
 

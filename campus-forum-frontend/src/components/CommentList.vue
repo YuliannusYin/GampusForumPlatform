@@ -5,11 +5,11 @@
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
         <!-- 评论主体 -->
         <div class="comment-main">
-          <el-avatar :size="40" :src="comment.userAvatar">{{ initialOf(comment.username) }}</el-avatar>
+          <el-avatar :size="40" :src="comment.userAvatar" class="comment-avatar" @click="goUserProfile(comment.userId)">{{ initialOf(comment.username) }}</el-avatar>
           <div class="comment-body">
             <!-- 顶部：用户名 + 时间 + 删除 -->
             <div class="comment-head">
-              <span class="comment-user">{{ comment.username }}</span>
+              <span class="comment-user" @click="goUserProfile(comment.userId)">{{ comment.username }}</span>
               <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
               <el-button
                 v-if="isOwnComment(comment)"
@@ -77,10 +77,10 @@
             <!-- 子回复列表 -->
             <div v-if="comment.repliesExpanded" class="reply-list">
               <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                <el-avatar :size="32" :src="reply.userAvatar">{{ initialOf(reply.username) }}</el-avatar>
+                <el-avatar :size="32" :src="reply.userAvatar" class="reply-avatar" @click="goUserProfile(reply.userId)">{{ initialOf(reply.username) }}</el-avatar>
                 <div class="reply-body">
                   <div class="reply-head">
-                    <span class="reply-user">{{ reply.username }}</span>
+                    <span class="reply-user" @click="goUserProfile(reply.userId)">{{ reply.username }}</span>
                     <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
                   </div>
                   <MdPreview :model-value="reply.content" class="reply-content" :preview-only="true" />
@@ -191,6 +191,11 @@ const isOwnComment = (comment) => {
   return userStore.isLoggedIn && userStore.userInfo?.id === comment.userId
 }
 
+// 跳转用户公开主页
+const goUserProfile = (userId) => {
+  if (userId) router.push(`/user/${userId}`)
+}
+
 // 拉取顶级评论
 const fetchComments = async () => {
   loading.value = true
@@ -233,7 +238,6 @@ const handlePageChange = () => {
 const handleLikeComment = async (comment) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再点赞')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   try {
@@ -249,7 +253,6 @@ const handleLikeComment = async (comment) => {
 const toggleReply = (comment) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再回复')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   comment.replying = !comment.replying
@@ -353,7 +356,6 @@ const handleDeleteComment = async (comment) => {
 const submitComment = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再发表评论')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   const content = newComment.value?.trim()
@@ -439,6 +441,15 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #303133;
+  cursor: pointer;
+}
+
+.comment-user:hover {
+  color: #409eff;
+}
+
+.comment-avatar {
+  cursor: pointer;
 }
 
 .comment-time {
@@ -506,6 +517,15 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 600;
   color: #303133;
+  cursor: pointer;
+}
+
+.reply-user:hover {
+  color: #409eff;
+}
+
+.reply-avatar {
+  cursor: pointer;
 }
 
 .reply-time {

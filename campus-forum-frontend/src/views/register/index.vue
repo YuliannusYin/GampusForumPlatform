@@ -152,8 +152,8 @@ const handleRegister = async () => {
     })
 
     ElMessage.success('注册成功')
-    // 注册成功后跳转登录页
-    router.push('/login')
+    // 注册成功后回到首页
+    router.push('/home')
   } catch (err) {
     // 错误已由 request.js 拦截器统一提示，此处仅关闭 loading
     loading.value = false

@@ -13,6 +13,10 @@
 
       <!-- 底部统计信息 -->
       <div class="post-footer">
+        <span v-if="post.username" class="post-author" @click.stop="goAuthorProfile">
+          <el-icon><User /></el-icon>
+          {{ post.username }}
+        </span>
         <span class="post-time">
           <el-icon><Clock /></el-icon>
           {{ formatTime(post.createTime) }}
@@ -67,6 +71,11 @@ const excerpt = computed(() => {
 const goDetail = () => {
   if (!props.post.id) return
   router.push(`/post/${props.post.id}`)
+}
+
+// 跳转作者用户主页
+const goAuthorProfile = () => {
+  if (props.post.userId) router.push(`/user/${props.post.userId}`)
 }
 </script>
 
@@ -126,9 +135,19 @@ const goDetail = () => {
 }
 
 .post-time,
-.post-stat {
+.post-stat,
+.post-author {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.post-author {
+  cursor: pointer;
+  color: #606266;
+}
+
+.post-author:hover {
+  color: #409eff;
 }
 </style>

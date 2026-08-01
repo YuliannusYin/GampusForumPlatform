@@ -93,9 +93,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import PostList from '@/components/PostList.vue'
+import { useUserStore } from '@/store/user'
 import { getSignInStatus, signIn } from '@/api/signin'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 顶部轮播公告位（静态）
 const banners = [
@@ -177,7 +179,10 @@ const goTagSearch = (tagId) => {
 }
 
 onMounted(() => {
-  fetchSignInStatus()
+  // 仅登录用户拉取签到状态，游客跳过避免触发 401
+  if (userStore.isLoggedIn) {
+    fetchSignInStatus()
+  }
 })
 </script>
 

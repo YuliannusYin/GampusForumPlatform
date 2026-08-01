@@ -12,9 +12,9 @@
 
         <!-- 作者信息 -->
         <div class="author-info">
-          <el-avatar :size="44" :src="post.userAvatar">{{ initialOf(post.username) }}</el-avatar>
+          <el-avatar :size="44" :src="post.userAvatar" class="author-avatar" @click="goAuthorProfile">{{ initialOf(post.username) }}</el-avatar>
           <div class="author-meta">
-            <span class="author-name">{{ post.username }}</span>
+            <span class="author-name" @click="goAuthorProfile">{{ post.username }}</span>
             <span class="post-time">
               <el-icon><Clock /></el-icon>
               {{ formatTime(post.createTime) }}
@@ -181,7 +181,6 @@ const fetchInteractions = async () => {
 const handleLike = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再点赞')
-    router.push({ path: '/login', query: { redirect: `/post/${postId.value}` } })
     return
   }
   likeLoading.value = true
@@ -202,7 +201,6 @@ const handleLike = async () => {
 const handleFavorite = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再收藏')
-    router.push({ path: '/login', query: { redirect: `/post/${postId.value}` } })
     return
   }
   favLoading.value = true
@@ -222,6 +220,13 @@ const handleFavorite = async () => {
 // 跳转编辑页
 const goEdit = () => {
   router.push(`/post/edit/${postId.value}`)
+}
+
+// 跳转作者用户主页
+const goAuthorProfile = () => {
+  if (post.value && post.value.userId) {
+    router.push(`/user/${post.value.userId}`)
+  }
 }
 
 // 删除帖子（确认后调用）
@@ -299,10 +304,19 @@ onMounted(() => {
   flex: 1;
 }
 
+.author-avatar {
+  cursor: pointer;
+}
+
 .author-name {
   font-size: 15px;
   font-weight: 600;
   color: #303133;
+  cursor: pointer;
+}
+
+.author-name:hover {
+  color: #409eff;
 }
 
 .post-time {

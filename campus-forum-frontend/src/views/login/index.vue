@@ -1,5 +1,7 @@
 <template>
   <div class="login-page">
+    <!-- 返回按钮 -->
+    <el-button class="back-button" :icon="ArrowLeft" circle @click="goBack" />
     <el-card class="login-card" shadow="always">
       <!-- 标题 -->
       <div class="login-header">
@@ -62,13 +64,22 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, ArrowLeft } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { login } from '@/api/auth'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+
+// 返回上一页；无历史记录则回首页
+const goBack = () => {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/home')
+  }
+}
 
 // 表单引用
 const loginFormRef = ref(null)
@@ -135,6 +146,13 @@ const handleLogin = async () => {
   min-height: 100vh;
   padding: 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.back-button {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
 }
 
 .login-card {

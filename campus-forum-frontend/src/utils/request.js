@@ -40,12 +40,14 @@ service.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        // 登录已过期，清理本地凭证并跳转登录页
-        localStorage.removeItem('campus_token')
-        localStorage.removeItem('campus_user')
-        ElMessage.error('登录已过期，请重新登录')
-        // 简单跳转：避免在拦截器中直接依赖 router 实例
-        window.location.href = '/login'
+        // 登录过期或游客访问需登录接口：仅清理过期凭证并提示，永远不主动跳转登录页
+        const hadToken = !!localStorage.getItem('campus_token')
+        if (hadToken) {
+          localStorage.removeItem('campus_token')
+          localStorage.removeItem('campus_user')
+          ElMessage.error('登录已过期，请重新登录')
+        }
+        // 静默拒绝，不跳转、不弹网络错误提示
         return Promise.reject(error)
       }
     }

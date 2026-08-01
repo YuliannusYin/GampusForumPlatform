@@ -164,10 +164,10 @@ const rules = {
   ]
 }
 
-// 打开创建弹窗：未登录跳转登录页
+// 打开创建弹窗：未登录提示
 const openCreateDialog = () => {
   if (!userStore.isLoggedIn) {
-    router.push('/login')
+    ElMessage.warning('请先登录后再创建社团')
     return
   }
   form.name = ''
