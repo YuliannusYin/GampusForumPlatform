@@ -34,6 +34,10 @@ const routes = [
       { path: 'user/favorites', name: 'UserFavorites', component: () => import('@/views/user/favorites.vue'), meta: { title: '我的收藏', requiresAuth: true } },
       { path: 'message/notification', name: 'Notification', component: () => import('@/views/message/notification.vue'), meta: { title: '通知', requiresAuth: true } },
       { path: 'message/chat', name: 'Chat', component: () => import('@/views/message/chat.vue'), meta: { title: '私信', requiresAuth: true } },
+      { path: 'club', name: 'ClubList', component: () => import('@/views/club/index.vue'), meta: { title: '社团' } },
+      { path: 'club/:id', name: 'ClubDetail', component: () => import('@/views/club/detail.vue'), meta: { title: '社团详情' } },
+      { path: 'user/settings', name: 'UserSettings', component: () => import('@/views/user/settings.vue'), meta: { title: '设置', requiresAuth: true } },
+      { path: 'user/:id', name: 'PublicProfile', component: () => import('@/views/user/public-profile.vue'), meta: { title: '用户主页' } },
       { path: 'search', name: 'Search', component: () => import('@/views/search/index.vue'), meta: { title: '搜索' } }
     ]
   },

@@ -28,7 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/stats")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 @Tag(name = "管理员-数据统计", description = "总量统计、发帖趋势、板块分布")
 public class StatsController {
 

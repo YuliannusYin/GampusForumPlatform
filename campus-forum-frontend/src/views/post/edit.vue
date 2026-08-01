@@ -1,5 +1,13 @@
 <template>
   <div class="post-edit" v-loading="pageLoading">
+    <el-alert
+      v-if="clubId"
+      title="正在社团内发帖"
+      type="info"
+      :closable="false"
+      show-icon
+      class="club-alert"
+    />
     <el-card class="edit-card" shadow="never">
       <template #header>
         <div class="edit-header">
@@ -101,6 +109,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { getSections, getTags, getPostDetail, createPost, updatePost } from '@/api/post'
+import { createClubPost } from '@/api/club'
 import { uploadFile } from '@/api/user'
 
 const route = useRoute()
@@ -110,6 +119,8 @@ const router = useRouter()
 const isEdit = computed(() => route.name === 'PostEdit')
 // 编辑模式下的帖子 ID
 const editId = computed(() => route.params.id)
+// 社团发帖模式：来自路由 query 的 clubId
+const clubId = computed(() => route.query.clubId)
 
 // 表单引用
 const formRef = ref(null)
@@ -231,14 +242,23 @@ const handleSubmit = async () => {
       // 编辑：调 updatePost
       result = await updatePost(editId.value, payload)
       ElMessage.success('修改成功')
+    } else if (clubId.value) {
+      // 社团发帖：调 createClubPost
+      result = await createClubPost(clubId.value, payload)
+      ElMessage.success('发布成功')
     } else {
       // 新建：调 createPost
       result = await createPost(payload)
       ElMessage.success('发布成功')
     }
-    // 跳转帖子详情：优先用返回的 id（PostDetailVO 或纯 id）
-    const targetId = (result && (result.id || result)) || editId.value
-    router.push(`/post/${targetId}`)
+    // 社团发帖成功后跳回社团详情，其余跳帖子详情
+    if (!isEdit.value && clubId.value) {
+      router.push(`/club/${clubId.value}`)
+    } else {
+      // 跳转帖子详情：优先用返回的 id（PostDetailVO 或纯 id）
+      const targetId = (result && (result.id || result)) || editId.value
+      router.push(`/post/${targetId}`)
+    }
   } catch (err) {
     // 错误已由 request.js 拦截器统一提示
   } finally {
@@ -262,6 +282,10 @@ onMounted(() => {
 .post-edit {
   max-width: 900px;
   margin: 0 auto;
+}
+
+.club-alert {
+  margin-bottom: 16px;
 }
 
 .edit-card {

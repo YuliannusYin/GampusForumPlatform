@@ -41,6 +41,7 @@
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
               <el-dropdown-item command="posts">我的发帖</el-dropdown-item>
               <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
+              <el-dropdown-item command="settings">设置</el-dropdown-item>
               <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>后台管理</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
@@ -56,6 +57,10 @@
           <el-menu-item index="all">
             <el-icon><Menu /></el-icon>
             <span>全部板块</span>
+          </el-menu-item>
+          <el-menu-item index="clubs" @click="goClubs">
+            <el-icon><User /></el-icon>
+            <span>社团</span>
           </el-menu-item>
           <el-menu-item
             v-for="section in sections"
@@ -134,8 +139,15 @@ const goCreatePost = () => {
   router.push('/post/create')
 }
 
+// 跳转社团列表页
+const goClubs = () => {
+  router.push('/club')
+}
+
 // 板块选择：跳转对应板块页或首页
 const handleSectionSelect = (index) => {
+  // 社团菜单项由 @click=goClubs 单独处理，这里直接跳过
+  if (index === 'clubs') return
   if (index === 'all') {
     router.push('/home')
   } else {
@@ -169,6 +181,9 @@ const handleCommand = (command) => {
       break
     case 'favorites':
       router.push('/user/favorites')
+      break
+    case 'settings':
+      router.push('/user/settings')
       break
     case 'admin':
       router.push('/admin')

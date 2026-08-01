@@ -12,10 +12,15 @@ export const useUserStore = defineStore('user', {
   getters: {
     // 是否已登录（token 非空即视为已登录）
     isLoggedIn: (state) => !!state.token,
-    // 是否为管理员（roles 中包含 ROLE_ADMIN）
+    // 是否为管理员（roles 中包含 ROLE_ADMIN 或 ROLE_SUPER_ADMIN）
     isAdmin: (state) => {
       const roles = state.userInfo?.roles || []
-      return Array.isArray(roles) ? roles.includes('ROLE_ADMIN') : false
+      return Array.isArray(roles) ? (roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')) : false
+    },
+    // 是否为超级管理员（roles 中包含 ROLE_SUPER_ADMIN）
+    isSuperAdmin: (state) => {
+      const roles = state.userInfo?.roles || []
+      return Array.isArray(roles) ? roles.includes('ROLE_SUPER_ADMIN') : false
     }
   },
 

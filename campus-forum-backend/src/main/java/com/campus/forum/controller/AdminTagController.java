@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/tags")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "管理员-标签管理", description = "标签创建、修改、删除")
 public class AdminTagController {
 

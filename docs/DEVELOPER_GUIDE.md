@@ -139,6 +139,15 @@ npm run dev
 
 前端开发服务默认启动在 `http://localhost:5173`，已通过 Vite 代理将 `/api` 请求转发到后端 8080 端口。
 
+### 默认账号
+
+| 用户名 | 密码 | 角色 | 说明 |
+| --- | --- | --- | --- |
+| admin | admin123 | ROLE_ADMIN | 系统管理员 |
+| superadmin | super123 | ROLE_SUPER_ADMIN | 超级管理员 |
+
+> **安全建议**：部署后请立即修改默认密码。
+
 ## 后端开发说明
 
 ### 配置文件
@@ -188,7 +197,12 @@ npm run dev
 2. **请求鉴权**：前端在 HTTP Header 携带 `Authorization: Bearer <accessToken>`，`JwtAuthenticationFilter` 解析并校验
 3. **Token 刷新**：`POST /api/auth/refresh`，携带 Refresh Token 签发新 Access Token
 4. **登出**：`POST /api/auth/logout`，清除 Redis 中的 Refresh Token
-5. **权限控制**：`@PreAuthorize("hasRole('ADMIN')")` 注解控制管理员接口，普通用户访问返回 403
+5. **权限控制**：系统包含三种角色：
+   - `ROLE_USER` - 普通用户
+   - `ROLE_ADMIN` - 管理员（管理论坛内容和普通用户）
+   - `ROLE_SUPER_ADMIN` - 超级管理员（管理网站和普通管理员）
+
+   通过 `@PreAuthorize` 注解控制接口访问，如 `@PreAuthorize("hasRole('ADMIN')")` 控制管理员接口，`@PreAuthorize("hasRole('SUPER_ADMIN')")` 控制超级管理员接口，权限不足返回 403。
 
 ### 接口模块
 
@@ -210,6 +224,12 @@ npm run dev
 | 管理-帖子 | AdminPostController | /api/admin/posts | 帖子管理（管理员） |
 | 管理-标签 | AdminTagController | /api/admin/tags | 标签管理（管理员） |
 | 统计 | StatsController | /api/stats | 数据看板（管理员） |
+| 社团 | ClubController | /api/clubs | 社团列表/详情/创建/加入/退出/发帖/成员管理 |
+| 关注 | FollowController | /api/users/{userId}/follow | 关注/取关/关注列表/粉丝列表 |
+| 用户主页 | UserProfileController | /api/users/{userId} | 公开信息/发帖/评论/社团 |
+| 用户设置 | UserSettingController | /api/user/settings | 通知偏好读写 |
+| 管理-管理员 | AdminAdminController | /api/admin/admins | 超级管理员管理普通管理员（仅 ROLE_SUPER_ADMIN） |
+| 管理-社团审核 | AdminClubController | /api/admin/clubs | 管理员审核社团申请 |
 
 ### WebSocket 实时私信
 
