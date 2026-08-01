@@ -53,7 +53,8 @@ const routes = [
       { path: 'posts', name: 'AdminPosts', component: () => import('@/views/admin/posts.vue'), meta: { title: '帖子管理', requiresAdmin: true } },
       { path: 'sections', name: 'AdminSections', component: () => import('@/views/admin/sections.vue'), meta: { title: '板块管理', requiresAdmin: true } },
       { path: 'tags', name: 'AdminTags', component: () => import('@/views/admin/tags.vue'), meta: { title: '标签管理', requiresAdmin: true } },
-      { path: 'clubs', name: 'AdminClubs', component: () => import('@/views/admin/clubs.vue'), meta: { title: '社团审核', requiresAdmin: true } }
+      { path: 'clubs', name: 'AdminClubs', component: () => import('@/views/admin/clubs.vue'), meta: { title: '社团审核', requiresAdmin: true } },
+      { path: 'test-data', name: 'AdminTestData', component: () => import('@/views/admin/test-data.vue'), meta: { title: '测试数据', requiresAdmin: true, requiresSuperAdmin: true } }
     ]
   },
   // 404 兜底
@@ -92,6 +93,13 @@ router.beforeEach((to, from, next) => {
 
   // 需要管理员权限但非管理员：提示并回到首页
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    ElMessage.error('无权限访问')
+    next('/')
+    return
+  }
+
+  // 需要超级管理员权限但非超级管理员：提示并回到首页
+  if (to.meta.requiresSuperAdmin && !userStore.isSuperAdmin) {
     ElMessage.error('无权限访问')
     next('/')
     return

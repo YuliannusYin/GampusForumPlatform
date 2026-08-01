@@ -35,6 +35,10 @@
           <el-icon><User /></el-icon>
           <span>社团审核</span>
         </el-menu-item>
+        <el-menu-item v-if="userStore.isSuperAdmin" index="/admin/test-data">
+          <el-icon><MagicStick /></el-icon>
+          <span>测试数据</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -61,9 +65,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { MagicStick } from '@element-plus/icons-vue'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 // 当前激活菜单：使用路由路径高亮
 const activeMenu = computed(() => route.path)
