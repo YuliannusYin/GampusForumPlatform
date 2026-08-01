@@ -1,11 +1,14 @@
 <template>
   <div class="favorites-page">
-    <div class="page-header">
-      <h3 class="page-title">我的收藏</h3>
+    <!-- Page header -->
+    <div class="page-header fade-in-up">
+      <div class="section-title">我的收藏</div>
     </div>
 
-    <div v-loading="loading" class="list-wrap">
-      <PostCard v-for="post in list" :key="post.id" :post="post" />
+    <div v-loading="loading" class="list-wrap fade-in-up delay-1">
+      <div v-for="(post, index) in list" :key="post.id" class="post-item fade-in-up" :style="{ animationDelay: (index * 0.05) + 's' }">
+        <PostCard :post="post" />
+      </div>
       <el-empty v-if="!loading && list.length === 0" description="还没有收藏任何帖子" />
     </div>
 
@@ -55,23 +58,34 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+/* === Page Header === */
 .page-header {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-5);
 }
 
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
+/* === List === */
 .list-wrap {
   min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
+.post-item {
+  opacity: 0;
+}
+
+/* === Pagination === */
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: var(--space-5);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .pagination-wrap {
+    justify-content: center;
+  }
 }
 </style>

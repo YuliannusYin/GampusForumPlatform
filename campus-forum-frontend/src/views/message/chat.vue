@@ -1,24 +1,29 @@
 <template>
   <div class="chat-page">
-    <div class="chat-layout">
+    <div class="chat-layout fade-in-up">
       <!-- 左侧会话列表 -->
       <div class="session-panel">
         <div class="session-header">
+          <el-icon><ChatDotRound /></el-icon>
           <span>私信会话</span>
         </div>
         <div class="session-list">
           <div
-            v-for="s in sessions"
+            v-for="(s, index) in sessions"
             :key="s.id"
-            class="session-item"
+            class="session-item fade-in-up"
             :class="{ active: currentSession && currentSession.id === s.id }"
+            :style="{ animationDelay: `${index * 0.03}s` }"
             @click="selectSession(s)"
           >
             <!-- 头像 + 未读徽章 -->
             <el-badge :value="s.unreadCount" :hidden="!s.unreadCount" class="session-badge">
-              <el-avatar :size="40" :src="s.otherAvatar">
-                {{ initialOf(s.otherUsername) }}
-              </el-avatar>
+              <div class="session-avatar-wrap">
+                <el-avatar :size="44" :src="s.otherAvatar" class="session-avatar">
+                  {{ initialOf(s.otherUsername) }}
+                </el-avatar>
+                <span class="online-dot"></span>
+              </div>
             </el-badge>
             <!-- 会话主体 -->
             <div class="session-body">
@@ -29,7 +34,17 @@
               <div class="session-last">{{ s.lastMessageContent }}</div>
             </div>
           </div>
-          <el-empty v-if="!sessionsLoading && sessions.length === 0" description="暂无会话" :image-size="60" />
+          <!-- 空状态 -->
+          <div v-if="!sessionsLoading && sessions.length === 0" class="session-empty">
+            <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="45" fill="var(--color-primary-bg)" />
+              <path d="M30 38 C30 34 33 32 36 32 L64 32 C67 32 70 34 70 38 L70 54 C70 58 67 60 64 60 L44 60 L36 67 L36 60 C33 60 30 58 30 54 Z" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="2.5" />
+              <circle cx="42" cy="46" r="2" fill="var(--color-primary)" opacity="0.5" />
+              <circle cx="50" cy="46" r="2" fill="var(--color-primary)" opacity="0.5" />
+              <circle cx="58" cy="46" r="2" fill="var(--color-primary)" opacity="0.5" />
+            </svg>
+            <p class="session-empty-text">暂无会话</p>
+          </div>
         </div>
       </div>
 
@@ -38,18 +53,28 @@
         <template v-if="currentSession || newChatMode">
           <!-- 顶部对方用户名 -->
           <div class="chat-header">
-            <span>{{ chatTitle }}</span>
+            <div class="chat-header-info">
+              <el-avatar :size="32" :src="currentSession ? currentSession.otherAvatar : ''" class="header-avatar">
+                {{ initialOf(currentSession ? currentSession.otherUsername : '') }}
+              </el-avatar>
+              <span class="chat-header-name">{{ chatTitle }}</span>
+              <span class="chat-header-status">
+                <span class="status-dot"></span>
+                在线
+              </span>
+            </div>
           </div>
 
           <!-- 消息列表 -->
           <div ref="messageListRef" class="message-list" v-loading="messagesLoading">
             <div
-              v-for="m in messages"
+              v-for="(m, index) in messages"
               :key="m.id"
-              class="message-item"
+              class="message-item fade-in-up"
               :class="{ mine: isMine(m) }"
+              :style="{ animationDelay: `${Math.min(index * 0.02, 0.2)}s` }"
             >
-              <el-avatar :size="32" :src="isMine(m) ? myAvatar : m.senderAvatar">
+              <el-avatar :size="36" :src="isMine(m) ? myAvatar : m.senderAvatar" class="msg-avatar">
                 {{ initialOf(isMine(m) ? myName : m.senderUsername) }}
               </el-avatar>
               <div class="message-body">
@@ -57,8 +82,26 @@
                 <div class="message-bubble">{{ m.content }}</div>
               </div>
             </div>
-            <el-empty v-if="!messagesLoading && !newChatMode && messages.length === 0" description="暂无消息，开始聊天吧" :image-size="80" />
-            <el-empty v-if="newChatMode" description="发送第一条消息后将创建会话" :image-size="80" />
+            <!-- 空状态 -->
+            <div v-if="!messagesLoading && !newChatMode && messages.length === 0" class="msg-empty">
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="54" fill="var(--color-primary-bg)" />
+                <path d="M36 46 C36 42 39 40 42 40 L78 40 C81 40 84 42 84 46 L84 64 C84 68 81 70 78 70 L54 70 L44 78 L44 70 C39 70 36 68 36 64 Z" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="2.5" />
+                <circle cx="50" cy="55" r="2.5" fill="var(--color-primary)" opacity="0.4" />
+                <circle cx="60" cy="55" r="2.5" fill="var(--color-primary)" opacity="0.4" />
+                <circle cx="70" cy="55" r="2.5" fill="var(--color-primary)" opacity="0.4" />
+              </svg>
+              <p class="msg-empty-text">暂无消息，开始聊天吧</p>
+            </div>
+            <div v-if="newChatMode" class="msg-empty">
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="54" fill="var(--color-primary-bg)" />
+                <path d="M36 46 C36 42 39 40 42 40 L78 40 C81 40 84 42 84 46 L84 64 C84 68 81 70 78 70 L54 70 L44 78 L44 70 C39 70 36 68 36 64 Z" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="2.5" />
+                <path d="M52 55 L68 55" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" opacity="0.5" />
+                <path d="M52 62 L62 62" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" opacity="0.3" />
+              </svg>
+              <p class="msg-empty-text">发送第一条消息后将创建会话</p>
+            </div>
           </div>
 
           <!-- 输入区 -->
@@ -71,10 +114,25 @@
               placeholder="输入消息，Enter 发送，Shift+Enter 换行"
               @keydown.enter.exact.prevent="handleSend"
             />
-            <el-button type="primary" :loading="sendLoading" @click="handleSend">发送</el-button>
+            <el-button type="primary" :loading="sendLoading" @click="handleSend" class="send-btn">
+              <el-icon><Promotion /></el-icon>
+              发送
+            </el-button>
           </div>
         </template>
-        <el-empty v-else description="请选择一个会话开始聊天" class="chat-empty" />
+        <!-- 未选择会话时的空状态 -->
+        <div v-else class="chat-empty">
+          <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="80" r="72" fill="var(--color-primary-bg)" />
+            <path d="M48 62 C48 56 52 53 57 53 L103 53 C108 53 112 56 112 62 L112 84 C112 90 108 93 103 93 L73 93 L60 103 L60 93 C52 93 48 90 48 84 Z" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="3" />
+            <circle cx="66" cy="73" r="3" fill="var(--color-primary)" opacity="0.4" />
+            <circle cx="80" cy="73" r="3" fill="var(--color-primary)" opacity="0.4" />
+            <circle cx="94" cy="73" r="3" fill="var(--color-primary)" opacity="0.4" />
+            <circle cx="40" cy="120" r="5" fill="var(--color-primary)" opacity="0.15" />
+            <circle cx="120" cy="110" r="4" fill="var(--color-primary)" opacity="0.1" />
+          </svg>
+          <p class="chat-empty-text">请选择一个会话开始聊天</p>
+        </div>
       </div>
     </div>
   </div>
@@ -312,55 +370,94 @@ const initialOf = (name) => {
   display: flex;
   height: calc(100vh - 160px);
   min-height: 500px;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-2xl);
   overflow: hidden;
+  box-shadow: var(--shadow-2);
 }
 
 /* 左侧会话列表 */
 .session-panel {
   width: 300px;
   flex-shrink: 0;
-  border-right: 1px solid #ebeef5;
+  border-right: 1px solid var(--color-border-lighter);
   display: flex;
   flex-direction: column;
+  background: var(--color-bg-subtle);
 }
 
 .session-header {
-  padding: 14px 16px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
-  background: #fafafa;
+  padding: var(--space-4) var(--space-4);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  border-bottom: 1px solid var(--color-border-lighter);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+}
+
+.session-header .el-icon {
+  color: var(--color-primary);
+  font-size: 20px;
 }
 
 .session-list {
   flex: 1;
   overflow-y: auto;
+  padding: var(--space-2);
 }
 
 .session-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   cursor: pointer;
-  border-bottom: 1px solid #f2f6fc;
-  transition: background 0.2s;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  margin-bottom: var(--space-1);
+  opacity: 0;
 }
 
 .session-item:hover {
-  background: #f5f7fa;
+  background: var(--color-bg-hover);
 }
 
 .session-item.active {
-  background: #ecf5ff;
+  background: var(--color-primary-bg);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
 .session-badge {
   flex-shrink: 0;
+}
+
+.session-avatar-wrap {
+  position: relative;
+}
+
+.session-avatar {
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-weight: var(--font-weight-semibold);
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  border: 2px solid var(--color-bg-subtle);
+}
+
+.session-item.active .online-dot {
+  border-color: var(--color-primary-bg);
 }
 
 .session-body {
@@ -368,37 +465,53 @@ const initialOf = (name) => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .session-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .session-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .session-time {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-3);
   flex-shrink: 0;
 }
 
 .session-last {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 会话列表空状态 */
+.session-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.session-empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-2) 0 0;
 }
 
 /* 右侧聊天窗口 */
@@ -407,30 +520,63 @@ const initialOf = (name) => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--color-bg-card);
 }
 
 .chat-header {
-  padding: 14px 18px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
-  background: #fafafa;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border-lighter);
+  background: var(--color-bg-card);
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.header-avatar {
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.chat-header-name {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+}
+
+.chat-header-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-caption);
+  color: var(--color-success);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
 }
 
 .message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  background: #f5f7fa;
+  padding: var(--space-4);
+  background: var(--color-bg-subtle);
 }
 
 /* 单条消息 */
 .message-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  opacity: 0;
 }
 
 /* 自己的消息：靠右 */
@@ -438,10 +584,18 @@ const initialOf = (name) => {
   flex-direction: row-reverse;
 }
 
+.msg-avatar {
+  flex-shrink: 0;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
 .message-body {
   display: flex;
   flex-direction: column;
-  max-width: 60%;
+  max-width: 65%;
 }
 
 .message-item.mine .message-body {
@@ -449,48 +603,148 @@ const initialOf = (name) => {
 }
 
 .message-time {
-  font-size: 11px;
-  color: #909399;
-  margin-bottom: 4px;
+  font-size: var(--font-size-mini);
+  color: var(--color-text-3);
+  margin-bottom: var(--space-1);
+  padding: 0 var(--space-1);
 }
 
 /* 气泡 */
 .message-bubble {
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
   word-break: break-word;
-  background: #fff;
-  color: #303133;
-  border: 1px solid #ebeef5;
+  background: var(--color-bg-card);
+  color: var(--color-text-1);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
+  position: relative;
 }
 
-/* 自己的气泡：绿色 */
+/* 对方气泡：左下角尖角 */
+.message-bubble::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 12px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 8px 6px 0;
+  border-color: transparent var(--color-bg-card) transparent transparent;
+}
+
+/* 自己的气泡：渐变蓝色 */
 .message-item.mine .message-bubble {
-  background: #95ec69;
-  color: #1a1a1a;
-  border-color: #95ec69;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  border-color: transparent;
+  box-shadow: var(--shadow-primary);
+}
+
+.message-item.mine .message-bubble::before {
+  left: auto;
+  right: -6px;
+  border-width: 6px 0 6px 8px;
+  border-color: transparent transparent transparent var(--color-primary);
+}
+
+/* 消息区空状态 */
+.msg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.msg-empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-3) 0 0;
 }
 
 /* 输入区 */
 .input-area {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid #ebeef5;
-  background: #fff;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-border-lighter);
+  background: var(--color-bg-card);
 }
 
 .input-area .el-input {
   flex: 1;
 }
 
+.send-btn {
+  height: 56px;
+  border-radius: var(--radius-xl);
+  padding: 0 var(--space-5);
+}
+
+/* 未选择会话时的空状态 */
 .chat-empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.chat-empty-text {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-2);
+  margin: var(--space-4) 0 0;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .chat-layout {
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    border-radius: var(--radius-lg);
+  }
+
+  .session-panel {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-lighter);
+  }
+
+  .session-list {
+    padding: var(--space-1);
+  }
+
+  .session-item {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .chat-header {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .chat-header-status {
+    display: none;
+  }
+
+  .message-body {
+    max-width: 80%;
+  }
+
+  .input-area {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .send-btn {
+    height: 48px;
+    padding: 0 var(--space-3);
+  }
 }
 </style>

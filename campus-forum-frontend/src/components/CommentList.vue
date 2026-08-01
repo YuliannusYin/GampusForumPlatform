@@ -1,15 +1,15 @@
 <template>
   <div class="comment-list">
-    <!-- 顶级评论列表 -->
+    <!-- Comment list -->
     <div v-if="comments.length" class="comment-items">
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
-        <!-- 评论主体 -->
+        <!-- Comment main -->
         <div class="comment-main">
-          <el-avatar :size="40" :src="comment.userAvatar">{{ initialOf(comment.username) }}</el-avatar>
+          <el-avatar :size="38" :src="comment.userAvatar" class="comment-avatar" @click="goUserProfile(comment.userId)">{{ initialOf(comment.username) }}</el-avatar>
           <div class="comment-body">
-            <!-- 顶部：用户名 + 时间 + 删除 -->
+            <!-- Head -->
             <div class="comment-head">
-              <span class="comment-user">{{ comment.username }}</span>
+              <span class="comment-user" @click="goUserProfile(comment.userId)">{{ comment.username }}</span>
               <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
               <el-button
                 v-if="isOwnComment(comment)"
@@ -22,35 +22,29 @@
                 删除
               </el-button>
             </div>
-            <!-- 内容：用 MdPreview 渲染 -->
+            <!-- Content -->
             <MdPreview :model-value="comment.content" class="comment-content" :preview-only="true" />
 
-            <!-- 操作行 -->
+            <!-- Actions -->
             <div class="comment-actions">
-              <el-button
-                link
-                :type="comment.liked ? 'primary' : ''"
-                size="small"
-                @click="handleLikeComment(comment)"
-              >
+              <button class="action-chip" :class="{ liked: comment.liked }" @click="handleLikeComment(comment)">
                 <el-icon><Pointer /></el-icon>
                 {{ comment.likeCount || 0 }}
-              </el-button>
-              <el-button link size="small" @click="toggleReply(comment)">
+              </button>
+              <button class="action-chip" @click="toggleReply(comment)">
                 <el-icon><ChatLineRound /></el-icon>
                 回复
-              </el-button>
-              <el-button
+              </button>
+              <button
                 v-if="comment.replyCount > 0"
-                link
-                size="small"
+                class="action-chip"
                 @click="toggleReplies(comment)"
               >
-                {{ comment.repliesExpanded ? '收起回复' : `展开回复(${comment.replyCount})` }}
-              </el-button>
+                {{ comment.repliesExpanded ? '收起回复' : `展开 ${comment.replyCount} 条回复` }}
+              </button>
             </div>
 
-            <!-- 回复输入框 -->
+            <!-- Reply input -->
             <div v-if="comment.replying" class="reply-input">
               <el-input
                 v-model="comment.replyContent"
@@ -74,19 +68,18 @@
               </div>
             </div>
 
-            <!-- 子回复列表 -->
+            <!-- Sub-replies -->
             <div v-if="comment.repliesExpanded" class="reply-list">
               <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                <el-avatar :size="32" :src="reply.userAvatar">{{ initialOf(reply.username) }}</el-avatar>
+                <el-avatar :size="28" :src="reply.userAvatar" class="reply-avatar" @click="goUserProfile(reply.userId)">{{ initialOf(reply.username) }}</el-avatar>
                 <div class="reply-body">
                   <div class="reply-head">
-                    <span class="reply-user">{{ reply.username }}</span>
+                    <span class="reply-user" @click="goUserProfile(reply.userId)">{{ reply.username }}</span>
                     <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
                   </div>
                   <MdPreview :model-value="reply.content" class="reply-content" :preview-only="true" />
                 </div>
               </div>
-              <!-- 加载更多回复 -->
               <el-button
                 v-if="comment.replies.length < comment.replyTotal"
                 link
@@ -103,10 +96,21 @@
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <el-empty v-else-if="!loading" description="暂无评论，快来抢沙发吧" />
+    <!-- Empty -->
+    <div v-else-if="!loading" class="empty-comments">
+      <div class="empty-icon">
+        <svg viewBox="0 0 120 120" width="80" height="80" fill="none">
+          <circle cx="60" cy="60" r="50" fill="#EBF1FF"/>
+          <path d="M40 50c0-3.3 2.7-6 6-6h28c3.3 0 6 2.7 6 6v16c0 3.3-2.7 6-6 6H52l-8 7v-7h-2c-1.1 0-2-.9-2-2V50z" fill="#fff" stroke="#1664FF" stroke-width="2"/>
+          <circle cx="52" cy="58" r="2.5" fill="#97BCFF"/>
+          <circle cx="62" cy="58" r="2.5" fill="#97BCFF"/>
+          <circle cx="72" cy="58" r="2.5" fill="#97BCFF"/>
+        </svg>
+      </div>
+      <p class="empty-text">暂无评论，快来抢沙发吧</p>
+    </div>
 
-    <!-- 分页 -->
+    <!-- Pagination -->
     <div v-if="total > 0" class="pagination-wrap">
       <el-pagination
         v-model:current-page="currentPage"
@@ -118,9 +122,12 @@
       />
     </div>
 
-    <!-- 底部发表顶级评论 -->
+    <!-- Post comment -->
     <div class="comment-post">
-      <div class="post-title">发表评论</div>
+      <div class="post-title">
+        <el-icon><EditPen /></el-icon>
+        发表评论
+      </div>
       <el-input
         v-model="newComment"
         type="textarea"
@@ -148,13 +155,13 @@ import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
+import { Pointer, ChatLineRound, EditPen } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { formatTime } from '@/utils/format'
 import { getComments, getReplies, createComment, deleteComment } from '@/api/comment'
 import { likeComment } from '@/api/interaction'
 
 const props = defineProps({
-  // 帖子 ID
   postId: {
     type: [Number, String],
     required: true
@@ -164,34 +171,30 @@ const props = defineProps({
 const router = useRouter()
 const userStore = useUserStore()
 
-// 顶级评论列表
 const comments = ref([])
-// 分页状态
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-// 列表加载状态
 const loading = ref(false)
 
-// 顶级评论输入
 const newComment = ref('')
 const submitting = ref(false)
 
-// 每页回复加载条数
 const replyPageSize = 5
 
-// 获取用户名首字母（头像占位）
 const initialOf = (name) => {
   if (!name) return ''
   return name.charAt(0).toUpperCase()
 }
 
-// 是否为当前用户自己的评论（用于显示删除按钮）
 const isOwnComment = (comment) => {
   return userStore.isLoggedIn && userStore.userInfo?.id === comment.userId
 }
 
-// 拉取顶级评论
+const goUserProfile = (userId) => {
+  if (userId) router.push(`/user/${userId}`)
+}
+
 const fetchComments = async () => {
   loading.value = true
   try {
@@ -199,9 +202,7 @@ const fetchComments = async () => {
       page: currentPage.value,
       size: pageSize.value
     })
-    // 兼容 { records, total, page, size }
     const list = res.records || []
-    // 为每条评论附加本地交互状态
     comments.value = list.map((c) => ({
       ...c,
       liked: false,
@@ -216,7 +217,6 @@ const fetchComments = async () => {
     }))
     total.value = res.total || 0
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
     comments.value = []
     total.value = 0
   } finally {
@@ -224,16 +224,13 @@ const fetchComments = async () => {
   }
 }
 
-// 翻页
 const handlePageChange = () => {
   fetchComments()
 }
 
-// 顶级评论点赞
 const handleLikeComment = async (comment) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再点赞')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   try {
@@ -241,28 +238,24 @@ const handleLikeComment = async (comment) => {
     comment.liked = !!res.liked
     comment.likeCount = res.likeCount != null ? res.likeCount : comment.likeCount
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
+    // handled by interceptor
   }
 }
 
-// 切换回复输入框显示
 const toggleReply = (comment) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再回复')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   comment.replying = !comment.replying
   if (comment.replying && !comment.replyContent) comment.replyContent = ''
 }
 
-// 取消回复
 const cancelReply = (comment) => {
   comment.replying = false
   comment.replyContent = ''
 }
 
-// 提交回复
 const submitReply = async (comment) => {
   const content = comment.replyContent?.trim()
   if (!content) return
@@ -272,7 +265,6 @@ const submitReply = async (comment) => {
       content,
       parentId: comment.id
     })
-    // 回复成功：回复数 +1；若已展开则追加到列表
     comment.replyCount = (comment.replyCount || 0) + 1
     comment.replyTotal = (comment.replyTotal || 0) + 1
     if (comment.repliesExpanded) {
@@ -282,26 +274,23 @@ const submitReply = async (comment) => {
     comment.replying = false
     ElMessage.success('回复成功')
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
+    // handled by interceptor
   } finally {
     comment.submitting = false
   }
 }
 
-// 展开 / 收起子回复
 const toggleReplies = async (comment) => {
   if (comment.repliesExpanded) {
     comment.repliesExpanded = false
     return
   }
-  // 首次展开：加载第一页
   if (comment.replies.length === 0) {
     await loadReplies(comment, 1)
   }
   comment.repliesExpanded = true
 }
 
-// 加载子回复（指定页码）
 const loadReplies = async (comment, page) => {
   comment.loadingMore = true
   try {
@@ -315,18 +304,16 @@ const loadReplies = async (comment, page) => {
     comment.replyTotal = res.total || 0
     comment.replyPage = page
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
+    // handled by interceptor
   } finally {
     comment.loadingMore = false
   }
 }
 
-// 加载更多回复
 const loadMoreReplies = (comment) => {
   loadReplies(comment, comment.replyPage + 1)
 }
 
-// 删除评论
 const handleDeleteComment = async (comment) => {
   try {
     await ElMessageBox.confirm('确定要删除这条评论吗？', '提示', {
@@ -335,25 +322,21 @@ const handleDeleteComment = async (comment) => {
       cancelButtonText: '取消'
     })
   } catch {
-    // 用户取消
     return
   }
   try {
     await deleteComment(comment.id)
     ElMessage.success('删除成功')
-    // 从列表中移除
     comments.value = comments.value.filter((c) => c.id !== comment.id)
     total.value = Math.max(0, total.value - 1)
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
+    // handled by interceptor
   }
 }
 
-// 发表顶级评论
 const submitComment = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再发表评论')
-    router.push({ path: '/login', query: { redirect: `/post/${props.postId}` } })
     return
   }
   const content = newComment.value?.trim()
@@ -364,7 +347,6 @@ const submitComment = async () => {
       content,
       parentId: 0
     })
-    // 新评论前置插入并附带本地状态
     comments.value.unshift({
       ...data,
       liked: false,
@@ -381,20 +363,16 @@ const submitComment = async () => {
     newComment.value = ''
     ElMessage.success('评论成功')
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
+    // handled by interceptor
   } finally {
     submitting.value = false
   }
 }
 
-// 帖子 ID 变化时重新加载
-watch(
-  () => props.postId,
-  () => {
-    currentPage.value = 1
-    fetchComments()
-  }
-)
+watch(() => props.postId, () => {
+  currentPage.value = 1
+  fetchComments()
+})
 
 onMounted(() => {
   fetchComments()
@@ -405,13 +383,13 @@ onMounted(() => {
 .comment-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-/* 评论项 */
+/* Comment item */
 .comment-item {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-lighter);
 }
 
 .comment-item:last-child {
@@ -420,7 +398,15 @@ onMounted(() => {
 
 .comment-main {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
+}
+
+.comment-avatar {
+  flex-shrink: 0;
+  cursor: pointer;
+  background: var(--gradient-primary);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
 }
 
 .comment-body {
@@ -431,63 +417,103 @@ onMounted(() => {
 .comment-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .comment-user {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.comment-user:hover {
+  color: var(--color-primary);
 }
 
 .comment-time {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-3);
 }
 
 .comment-del {
   margin-left: auto;
 }
 
-/* 评论内容：限制 MdPreview 内边距 */
 .comment-content :deep(.md-editor-preview) {
-  padding: 4px 0;
-  font-size: 14px;
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-body);
+  color: var(--color-text-2);
 }
 
-/* 操作行 */
+/* Action chips */
 .comment-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 4px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
-/* 回复输入框 */
+.action-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.action-chip:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-1);
+}
+
+.action-chip.liked {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.action-chip .el-icon {
+  font-size: 14px;
+}
+
+/* Reply input */
 .reply-input {
-  margin-top: 10px;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-page);
+  border-radius: var(--radius-lg);
 }
 
 .reply-input-btns {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
-/* 子回复列表 */
+/* Sub-replies */
 .reply-list {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background-color: #f9fafb;
-  border-radius: 6px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-lighter);
 }
 
 .reply-item {
   display: flex;
-  gap: 10px;
-  padding: 8px 0;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
 }
 
 .reply-body {
@@ -498,50 +524,86 @@ onMounted(() => {
 .reply-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 2px;
 }
 
 .reply-user {
-  font-size: 13px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.reply-user:hover {
+  color: var(--color-primary);
+}
+
+.reply-avatar {
+  cursor: pointer;
+  background: var(--gradient-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
 }
 
 .reply-time {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-3);
 }
 
 .reply-content :deep(.md-editor-preview) {
   padding: 2px 0;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
 }
 
-/* 分页 */
+/* Empty */
+.empty-comments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: var(--space-3);
+}
+
+.empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+}
+
+/* Pagination */
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
-/* 底部发表评论 */
+/* Post comment */
 .comment-post {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-lighter);
 }
 
 .post-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  margin-bottom: var(--space-3);
 }
 
 .post-btn-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: var(--space-2);
 }
 </style>

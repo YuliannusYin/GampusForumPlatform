@@ -82,7 +82,7 @@ public class SectionController {
      * @return 创建后的板块
      */
     @Operation(summary = "创建板块", description = "仅管理员可操作")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("")
     public Result<SectionVO> createSection(@Parameter(description = "板块信息", required = true)
                                            @Valid @RequestBody Section section) {
@@ -98,7 +98,7 @@ public class SectionController {
      * @return 更新后的板块
      */
     @Operation(summary = "更新板块", description = "仅管理员可操作")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PutMapping("/{id}")
     public Result<SectionVO> updateSection(@Parameter(description = "板块ID", required = true)
                                            @PathVariable("id") Long id,
@@ -120,7 +120,7 @@ public class SectionController {
      * @return 操作结果
      */
     @Operation(summary = "删除板块", description = "逻辑删除，仅管理员可操作")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<String> deleteSection(@Parameter(description = "板块ID", required = true)
                                         @PathVariable("id") Long id) {

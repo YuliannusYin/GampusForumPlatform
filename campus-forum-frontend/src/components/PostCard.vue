@@ -1,50 +1,66 @@
 <template>
-  <el-card class="post-card" shadow="hover" @click="goDetail">
+  <article class="post-card" @click="goDetail">
     <div class="post-main">
-      <!-- 标题行 -->
-      <div class="post-title">
-        <el-tag v-if="post.isTop" type="danger" size="small" effect="dark">置顶</el-tag>
-        <el-tag v-if="post.isEssence" type="warning" size="small" effect="dark">精华</el-tag>
-        <span class="title-text" @click.stop="goDetail">{{ post.title }}</span>
+      <!-- Tags row -->
+      <div class="post-tags-row" v-if="post.isTop || post.isEssence">
+        <span v-if="post.isTop" class="badge badge-top">
+          <el-icon><Top /></el-icon>
+          置顶
+        </span>
+        <span v-if="post.isEssence" class="badge badge-essence">
+          <el-icon><StarFilled /></el-icon>
+          精华
+        </span>
       </div>
 
-      <!-- 摘要 -->
-      <div class="post-summary text-ellipsis-2">{{ post.summary || excerpt }}</div>
+      <!-- Title -->
+      <h3 class="post-title" @click.stop="goDetail">{{ post.title }}</h3>
 
-      <!-- 底部统计信息 -->
+      <!-- Summary -->
+      <p class="post-summary text-ellipsis-2">{{ post.summary || excerpt }}</p>
+
+      <!-- Footer -->
       <div class="post-footer">
-        <span class="post-time">
-          <el-icon><Clock /></el-icon>
-          {{ formatTime(post.createTime) }}
-        </span>
-        <span class="post-stat">
-          <el-icon><View /></el-icon>
-          {{ post.viewCount || 0 }}
-        </span>
-        <span class="post-stat">
-          <el-icon><Pointer /></el-icon>
-          {{ post.likeCount || 0 }}
-        </span>
-        <span class="post-stat">
-          <el-icon><ChatDotRound /></el-icon>
-          {{ post.commentCount || 0 }}
-        </span>
-        <span v-if="post.favoriteCount != null" class="post-stat">
-          <el-icon><Star /></el-icon>
-          {{ post.favoriteCount || 0 }}
-        </span>
+        <div class="footer-left">
+          <span v-if="post.username" class="post-author" @click.stop="goAuthorProfile">
+            <el-avatar :size="22" class="author-avatar">{{ authorInitial }}</el-avatar>
+            {{ post.username }}
+          </span>
+          <span class="post-time">
+            <el-icon><Clock /></el-icon>
+            {{ formatTime(post.createTime) }}
+          </span>
+        </div>
+        <div class="footer-right">
+          <span class="post-stat">
+            <el-icon><View /></el-icon>
+            {{ post.viewCount || 0 }}
+          </span>
+          <span class="post-stat">
+            <el-icon><Pointer /></el-icon>
+            {{ post.likeCount || 0 }}
+          </span>
+          <span class="post-stat">
+            <el-icon><ChatDotRound /></el-icon>
+            {{ post.commentCount || 0 }}
+          </span>
+          <span v-if="post.favoriteCount != null" class="post-stat">
+            <el-icon><Star /></el-icon>
+            {{ post.favoriteCount || 0 }}
+          </span>
+        </div>
       </div>
     </div>
-  </el-card>
+  </article>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { Top, StarFilled, Clock, View, Pointer, ChatDotRound, Star } from '@element-plus/icons-vue'
 import { formatTime } from '@/utils/format'
 
 const props = defineProps({
-  // 帖子对象
   post: {
     type: Object,
     required: true
@@ -53,7 +69,6 @@ const props = defineProps({
 
 const router = useRouter()
 
-// 摘要：无 summary 时截取 content 纯文本
 const excerpt = computed(() => {
   const content = props.post.content || ''
   const text = content
@@ -63,72 +78,190 @@ const excerpt = computed(() => {
   return text.slice(0, 120)
 })
 
-// 跳转帖子详情
+const authorInitial = computed(() => {
+  const name = props.post.username || ''
+  return name ? name.charAt(0).toUpperCase() : ''
+})
+
 const goDetail = () => {
   if (!props.post.id) return
   router.push(`/post/${props.post.id}`)
+}
+
+const goAuthorProfile = () => {
+  if (props.post.userId) router.push(`/user/${props.post.userId}`)
 }
 </script>
 
 <style scoped>
 .post-card {
-  margin-bottom: 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-3);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.post-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 .post-card:hover {
-  transform: translateY(-2px);
+  border-color: var(--color-primary-3);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+}
+
+.post-card:hover::before {
+  opacity: 1;
 }
 
 .post-main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.post-title {
+/* Badges */
+.post-tags-row {
   display: flex;
+  gap: var(--space-2);
+  margin-bottom: -2px;
+}
+
+.badge {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-mini);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
 }
 
-.title-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+.badge .el-icon {
+  font-size: 11px;
 }
 
-.title-text:hover {
-  color: #409eff;
+.badge-top {
+  background: var(--color-danger-tag-bg);
+  color: var(--color-danger);
 }
 
+.badge-essence {
+  background: var(--color-warning-tag-bg);
+  color: var(--color-warning);
+}
+
+/* Title */
+.post-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.post-title:hover {
+  color: var(--color-primary);
+}
+
+/* Summary */
 .post-summary {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
+  line-height: var(--line-height-relaxed);
 }
 
-/* 两行省略 */
-.text-ellipsis-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
+/* Footer */
 .post-footer {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 13px;
-  color: #909399;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-lighter);
 }
 
-.post-time,
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.post-author:hover {
+  color: var(--color-primary);
+}
+
+.author-avatar {
+  background: var(--gradient-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.post-time {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-3);
+}
+
 .post-stat {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-3);
+  transition: color var(--transition-fast);
+}
+
+.post-stat .el-icon {
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .post-card {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .post-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .footer-right {
+    gap: var(--space-3);
+  }
 }
 </style>

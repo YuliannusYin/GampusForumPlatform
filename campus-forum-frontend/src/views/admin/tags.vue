@@ -1,23 +1,40 @@
 <template>
   <div class="tags-page">
-    <el-card shadow="never" class="table-card">
-      <!-- 顶部操作栏 -->
-      <div class="toolbar">
-        <span class="toolbar-title">标签列表</span>
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增标签</el-button>
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">标签管理</h1>
+        <p class="page-subtitle">管理帖子标签与分类</p>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增标签</el-button>
+    </div>
+
+    <!-- 标签卡片网格 -->
+    <div class="tag-grid" v-loading="loading">
+      <div
+        v-for="(tag, index) in list"
+        :key="tag.id"
+        class="tag-card"
+      >
+        <div class="tag-card-top">
+          <div class="tag-icon-wrap" :class="'grad-' + (index % 5)">
+            <span class="tag-hash">#</span>
+          </div>
+          <div class="tag-actions">
+            <el-button size="small" link @click="openEditDialog(tag)">编辑</el-button>
+            <el-button size="small" type="danger" link @click="handleDelete(tag)">删除</el-button>
+          </div>
+        </div>
+        <div class="tag-name">{{ tag.name }}</div>
+        <div class="tag-count">
+          <span class="count-num">{{ tag.postCount || 0 }}</span>
+          <span class="count-label">篇帖子</span>
+        </div>
       </div>
 
-      <el-table :data="list" v-loading="loading" border stripe>
-        <el-table-column prop="name" label="名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="postCount" label="帖子数" width="140" align="center" />
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="openEditDialog(row)">编辑</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <!-- 空状态 -->
+      <el-empty v-if="!loading && list.length === 0" description="暂无标签" class="tag-empty" />
+    </div>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog
@@ -156,23 +173,129 @@ onMounted(() => {
 .tags-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
-.table-card {
-  border-radius: 6px;
-}
-
-.toolbar {
+/* ===== 页面标题 ===== */
+.page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
 }
 
-.toolbar-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+.page-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-1) 0 0;
+}
+
+/* ===== 标签卡片网格 ===== */
+.tag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  min-height: 200px;
+}
+
+.tag-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tag-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-3);
+}
+
+.tag-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tag-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.tag-hash {
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+  line-height: 1;
+}
+
+/* Gradient backgrounds cycling through 5 gradients */
+.grad-0 { background: var(--gradient-primary); }
+.grad-1 { background: var(--gradient-mint); }
+.grad-2 { background: var(--gradient-gold); }
+.grad-3 { background: var(--gradient-sunset); }
+.grad-4 { background: var(--gradient-purple); }
+
+.tag-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tag-name {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.count-num {
+  font-family: var(--font-display);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text-2);
+}
+
+.count-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+}
+
+/* Empty state */
+.tag-empty {
+  grid-column: 1 / -1;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .tag-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

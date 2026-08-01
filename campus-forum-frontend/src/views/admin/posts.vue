@@ -1,7 +1,15 @@
 <template>
   <div class="posts-page">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">帖子管理</h1>
+        <p class="page-subtitle">管理平台帖子、置顶与加精</p>
+      </div>
+    </div>
+
     <!-- 搜索栏 -->
-    <el-card shadow="never" class="filter-card">
+    <div class="filter-card">
       <el-form :inline="true" @submit.prevent>
         <el-form-item label="关键词">
           <el-input
@@ -37,11 +45,11 @@
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </div>
 
     <!-- 帖子表格 -->
-    <el-card shadow="never" class="table-card">
-      <el-table :data="list" v-loading="loading" border stripe>
+    <div class="table-card">
+      <el-table :data="list" v-loading="loading" class="admin-table">
         <el-table-column label="标题" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="openPost(row)">
@@ -56,20 +64,20 @@
         <el-table-column prop="commentCount" label="评论" width="80" align="center" />
         <el-table-column label="置顶" width="80" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.isTop" type="danger" size="small">是</el-tag>
+            <el-tag v-if="row.isTop" type="danger" size="small" class="status-chip">是</el-tag>
             <span v-else class="text-muted">否</span>
           </template>
         </el-table-column>
         <el-table-column label="精华" width="80" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.isEssence" type="warning" size="small">是</el-tag>
+            <el-tag v-if="row.isEssence" type="warning" size="small" class="status-chip">是</el-tag>
             <span v-else class="text-muted">否</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 0" type="success" size="small">正常</el-tag>
-            <el-tag v-else type="info" size="small">隐藏</el-tag>
+            <el-tag v-if="row.status === 0" type="success" size="small" class="status-chip">正常</el-tag>
+            <el-tag v-else type="info" size="small" class="status-chip">隐藏</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="发布时间" width="160">
@@ -112,7 +120,7 @@
           @size-change="handleSizeChange"
         />
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -257,21 +265,88 @@ onMounted(() => {
 .posts-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
-.filter-card,
-.table-card {
-  border-radius: 6px;
-}
-
-.pagination-wrap {
+/* ===== 页面标题 ===== */
+.page-header {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-1) 0 0;
+}
+
+/* ===== 筛选卡片 ===== */
+.filter-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-1);
+}
+
+.filter-card :deep(.el-form-item) {
+  margin-bottom: 0;
+  margin-right: var(--space-4);
+}
+
+.filter-card :deep(.el-form-item__label) {
+  color: var(--color-text-2);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ===== 表格卡片 ===== */
+.table-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.admin-table {
+  border-radius: var(--radius-xl);
 }
 
 .text-muted {
-  color: #c0c4cc;
+  color: var(--color-text-4);
+}
+
+.status-chip {
+  border-radius: var(--radius-full);
+}
+
+/* ===== 分页 ===== */
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .filter-card :deep(.el-form-item) {
+    margin-right: 0;
+    margin-bottom: var(--space-2);
+  }
+
+  .pagination-wrap {
+    justify-content: center;
+  }
 }
 </style>

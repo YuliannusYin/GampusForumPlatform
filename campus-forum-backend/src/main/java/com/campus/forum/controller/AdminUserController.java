@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 @Tag(name = "管理员-用户管理", description = "用户分页查询、封禁/解禁、修改角色")
 public class AdminUserController {
 

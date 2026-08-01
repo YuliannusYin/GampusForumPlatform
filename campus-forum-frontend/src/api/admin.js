@@ -84,3 +84,35 @@ export function getPostTrend(params) {
 export function getSectionDistribution() {
   return request.get('/admin/stats/section/distribution')
 }
+
+// ===== 社团审核 =====
+// 待审核社团列表
+export function getPendingClubs(params) {
+  return request.get('/admin/clubs', { params })
+}
+
+// 审核通过
+export function approveClub(clubId) {
+  return request.put(`/admin/clubs/${clubId}/approve`)
+}
+
+// 审核拒绝
+export function rejectClub(clubId) {
+  return request.put(`/admin/clubs/${clubId}/reject`)
+}
+
+// ===== 测试数据管理（仅超级管理员）=====
+// 一键导入测试数据
+export function importTestData() {
+  return request.post('/admin/test-data/import')
+}
+
+// 一键移除测试数据
+export function removeTestData() {
+  return request.delete('/admin/test-data')
+}
+
+// 查询测试数据状态
+export function getTestDataStatus() {
+  return request.get('/admin/test-data/status')
+}

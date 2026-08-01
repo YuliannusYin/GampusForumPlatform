@@ -34,6 +34,10 @@ const routes = [
       { path: 'user/favorites', name: 'UserFavorites', component: () => import('@/views/user/favorites.vue'), meta: { title: '我的收藏', requiresAuth: true } },
       { path: 'message/notification', name: 'Notification', component: () => import('@/views/message/notification.vue'), meta: { title: '通知', requiresAuth: true } },
       { path: 'message/chat', name: 'Chat', component: () => import('@/views/message/chat.vue'), meta: { title: '私信', requiresAuth: true } },
+      { path: 'club', name: 'ClubList', component: () => import('@/views/club/index.vue'), meta: { title: '社团' } },
+      { path: 'club/:id', name: 'ClubDetail', component: () => import('@/views/club/detail.vue'), meta: { title: '社团详情' } },
+      { path: 'user/settings', name: 'UserSettings', component: () => import('@/views/user/settings.vue'), meta: { title: '设置', requiresAuth: true } },
+      { path: 'user/:id', name: 'PublicProfile', component: () => import('@/views/user/public-profile.vue'), meta: { title: '用户主页' } },
       { path: 'search', name: 'Search', component: () => import('@/views/search/index.vue'), meta: { title: '搜索' } }
     ]
   },
@@ -48,7 +52,9 @@ const routes = [
       { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/users.vue'), meta: { title: '用户管理', requiresAdmin: true } },
       { path: 'posts', name: 'AdminPosts', component: () => import('@/views/admin/posts.vue'), meta: { title: '帖子管理', requiresAdmin: true } },
       { path: 'sections', name: 'AdminSections', component: () => import('@/views/admin/sections.vue'), meta: { title: '板块管理', requiresAdmin: true } },
-      { path: 'tags', name: 'AdminTags', component: () => import('@/views/admin/tags.vue'), meta: { title: '标签管理', requiresAdmin: true } }
+      { path: 'tags', name: 'AdminTags', component: () => import('@/views/admin/tags.vue'), meta: { title: '标签管理', requiresAdmin: true } },
+      { path: 'clubs', name: 'AdminClubs', component: () => import('@/views/admin/clubs.vue'), meta: { title: '社团审核', requiresAdmin: true } },
+      { path: 'test-data', name: 'AdminTestData', component: () => import('@/views/admin/test-data.vue'), meta: { title: '测试数据', requiresAdmin: true, requiresSuperAdmin: true } }
     ]
   },
   // 404 兜底
@@ -78,14 +84,22 @@ router.beforeEach((to, from, next) => {
   // 在守卫内部调用 useUserStore，确保 pinia 已初始化
   const userStore = useUserStore()
 
-  // 需要登录但未登录：跳转登录页并记录回跳地址
+  // 需要登录但未登录：提示并回到首页（不主动跳转登录页）
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    next({ path: '/login', query: { redirect: to.fullPath } })
+    ElMessage.warning('该页面需要登录后才能访问')
+    next('/')
     return
   }
 
   // 需要管理员权限但非管理员：提示并回到首页
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    ElMessage.error('无权限访问')
+    next('/')
+    return
+  }
+
+  // 需要超级管理员权限但非超级管理员：提示并回到首页
+  if (to.meta.requiresSuperAdmin && !userStore.isSuperAdmin) {
     ElMessage.error('无权限访问')
     next('/')
     return

@@ -1,9 +1,11 @@
 <template>
   <div class="profile-page">
-    <!-- 顶部用户信息卡片 -->
-    <el-card class="user-card" shadow="never">
-      <div class="user-info">
-        <!-- 头像：点击可上传新头像 -->
+    <!-- Profile header card with gradient banner -->
+    <div class="profile-header fade-in-up">
+      <div class="header-banner">
+        <div class="banner-decoration"></div>
+      </div>
+      <div class="header-body">
         <el-upload
           :show-file-list="false"
           :http-request="handleAvatarUpload"
@@ -11,7 +13,7 @@
           class="avatar-uploader"
         >
           <div class="avatar-wrap">
-            <el-avatar :size="100" :src="userInfo.avatar" class="user-avatar">
+            <el-avatar :size="96" :src="userInfo.avatar" class="user-avatar">
               {{ usernameInitial }}
             </el-avatar>
             <div class="avatar-mask">
@@ -21,16 +23,16 @@
           </div>
         </el-upload>
 
-        <!-- 基本信息 -->
         <div class="user-meta">
           <div class="user-name-row">
             <span class="user-nickname">{{ userInfo.nickname || userInfo.username }}</span>
-            <el-tag type="primary" size="small">Lv.{{ userInfo.level || 1 }}</el-tag>
+            <el-tag type="primary" size="small" effect="light">Lv.{{ userInfo.level || 1 }}</el-tag>
             <el-tag
               v-for="role in userInfo.roles"
               :key="role"
               :type="roleType(role)"
               size="small"
+              effect="light"
             >
               {{ roleText(role) }}
             </el-tag>
@@ -42,16 +44,23 @@
               {{ userInfo.email }}
             </span>
           </div>
-          <div class="user-points">
-            <el-icon><GoldMedal /></el-icon>
-            <span>积分：{{ userInfo.points || 0 }}</span>
+        </div>
+
+        <div class="header-stats">
+          <div class="header-stat">
+            <span class="stat-number header-stat-value">{{ userInfo.points || 0 }}</span>
+            <span class="header-stat-label">积分</span>
+          </div>
+          <div class="header-stat">
+            <span class="stat-number header-stat-value">Lv.{{ userInfo.level || 1 }}</span>
+            <span class="header-stat-label">等级</span>
           </div>
         </div>
       </div>
-    </el-card>
+    </div>
 
-    <!-- 主体内容：标签页 -->
-    <el-tabs v-model="activeTab" class="profile-tabs">
+    <!-- Main content: tabs -->
+    <el-tabs v-model="activeTab" class="profile-tabs fade-in-up delay-1">
       <!-- 我的资料 -->
       <el-tab-pane label="我的资料" name="profile">
         <el-row :gutter="20">
@@ -59,12 +68,12 @@
           <el-col :xs="24" :md="14">
             <el-card shadow="never" class="section-card">
               <template #header>
-                <span class="card-title">编辑资料</span>
+                <div class="section-title">编辑资料</div>
               </template>
               <el-form ref="profileFormRef" :model="profileForm" label-width="80px">
                 <el-form-item label="头像">
                   <div class="form-avatar">
-                    <el-avatar :size="80" :src="profileForm.avatar">
+                    <el-avatar :size="64" :src="profileForm.avatar" class="form-avatar-img">
                       {{ usernameInitial }}
                     </el-avatar>
                     <el-upload
@@ -116,7 +125,7 @@
           <el-col :xs="24" :md="10">
             <el-card shadow="never" class="section-card">
               <template #header>
-                <span class="card-title">修改密码</span>
+                <div class="section-title">修改密码</div>
               </template>
               <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="90px">
                 <el-form-item label="旧密码" prop="oldPassword">
@@ -159,17 +168,27 @@
         <el-card shadow="never" class="section-card">
           <!-- 积分概览 -->
           <div class="points-overview">
-            <div class="overview-item">
-              <div class="overview-label">当前积分</div>
-              <div class="overview-value">{{ userInfo.points || 0 }}</div>
+            <div class="overview-item overview-points">
+              <div class="overview-icon">
+                <el-icon><GoldMedal /></el-icon>
+              </div>
+              <div class="overview-info">
+                <div class="overview-label">当前积分</div>
+                <div class="stat-number overview-value">{{ userInfo.points || 0 }}</div>
+              </div>
             </div>
-            <div class="overview-item">
-              <div class="overview-label">当前等级</div>
-              <div class="overview-value">Lv.{{ userInfo.level || 1 }}</div>
+            <div class="overview-item overview-level">
+              <div class="overview-icon">
+                <el-icon><Medal /></el-icon>
+              </div>
+              <div class="overview-info">
+                <div class="overview-label">当前等级</div>
+                <div class="stat-number overview-value">Lv.{{ userInfo.level || 1 }}</div>
+              </div>
             </div>
           </div>
 
-          <el-table :data="pointsRecords" v-loading="pointsLoading" border stripe>
+          <el-table :data="pointsRecords" v-loading="pointsLoading" stripe>
             <el-table-column label="变更值" prop="changeValue" width="100" align="center">
               <template #default="{ row }">
                 <span :class="row.changeValue >= 0 ? 'points-up' : 'points-down'">
@@ -199,7 +218,7 @@
       <!-- 签到记录 -->
       <el-tab-pane label="签到记录" name="signin">
         <el-card shadow="never" class="section-card">
-          <el-table :data="signinRecords" v-loading="signinLoading" border stripe>
+          <el-table :data="signinRecords" v-loading="signinLoading" stripe>
             <el-table-column label="签到日期" prop="signinDate" width="160">
               <template #default="{ row }">{{ formatDate(row.signinDate) }}</template>
             </el-table-column>
@@ -459,32 +478,65 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 用户信息卡片 */
-.user-card {
-  margin-bottom: 16px;
+/* === Profile Header === */
+.profile-header {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+  margin-bottom: var(--space-5);
 }
 
-.user-info {
+.header-banner {
+  position: relative;
+  height: 120px;
+  background: var(--gradient-primary);
+  overflow: hidden;
+}
+
+.banner-decoration {
+  position: absolute;
+  top: -60%;
+  right: 5%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 65%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.header-body {
   display: flex;
-  align-items: center;
-  gap: 24px;
+  align-items: flex-end;
+  gap: var(--space-6);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .avatar-uploader {
   display: inline-block;
+  flex-shrink: 0;
+  margin-top: -48px;
 }
 
 .avatar-wrap {
   position: relative;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-full);
   overflow: hidden;
   cursor: pointer;
+  border: 4px solid var(--color-bg-card);
+  box-shadow: var(--shadow-2);
 }
 
 .user-avatar {
   display: block;
+  --el-avatar-bg-color: transparent;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-h1);
 }
 
 .avatar-mask {
@@ -495,11 +547,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 12px;
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.5);
+  font-size: var(--font-size-caption);
+  color: var(--color-white);
+  background-color: rgba(12, 13, 14, 0.5);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-fast);
+  border-radius: var(--radius-full);
 }
 
 .avatar-wrap:hover .avatar-mask {
@@ -508,117 +561,242 @@ onMounted(() => {
 
 .user-meta {
   flex: 1;
+  min-width: 0;
+  padding-bottom: var(--space-1);
 }
 
 .user-name-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .user-nickname {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  line-height: var(--line-height-tight);
 }
 
 .user-detail-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  font-size: 14px;
-  color: #606266;
-  margin-bottom: 6px;
+  gap: var(--space-4);
+  font-size: var(--font-size-body);
+  color: var(--color-text-3);
 }
 
 .user-email {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
-.user-points {
+.header-stats {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: #e6a23c;
-  font-weight: 600;
+  gap: var(--space-6);
+  flex-shrink: 0;
+  padding-bottom: var(--space-1);
 }
 
-/* 标签页 */
+.header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.header-stat-value {
+  font-size: var(--font-size-h1);
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.header-stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  font-weight: var(--font-weight-medium);
+}
+
+/* === Tabs === */
 .profile-tabs {
   background-color: transparent;
 }
 
-.section-card {
-  margin-bottom: 16px;
+.profile-tabs :deep(.el-tabs__header) {
+  margin-bottom: var(--space-5);
 }
 
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+.profile-tabs :deep(.el-tabs__nav-wrap::after) {
+  background-color: var(--color-border-light);
+}
+
+.profile-tabs :deep(.el-tabs__item) {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-body);
+  color: var(--color-text-3);
+  height: 44px;
+}
+
+.profile-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.profile-tabs :deep(.el-tabs__active-bar) {
+  background: var(--gradient-primary);
+  height: 3px;
+  border-radius: var(--radius-full);
+}
+
+.section-card {
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+}
+
+.section-card :deep(.el-card__header) {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-lighter);
+}
+
+.section-card :deep(.el-card__body) {
+  padding: var(--space-5);
 }
 
 .form-avatar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-/* 积分概览 */
+.form-avatar-img {
+  --el-avatar-bg-color: transparent;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+}
+
+/* === Points Overview === */
 .points-overview {
   display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
 }
 
 .overview-item {
-  flex: 0 0 auto;
-  padding: 16px 24px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
-  text-align: center;
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+}
+
+.overview-points {
+  background: var(--color-primary-bg);
+}
+
+.overview-level {
+  background: var(--color-warning-bg);
+}
+
+.overview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.overview-points .overview-icon {
+  background: var(--color-primary-tag-bg);
+  color: var(--color-primary);
+}
+
+.overview-level .overview-icon {
+  background: var(--color-warning-tag-bg);
+  color: var(--color-warning);
+}
+
+.overview-info {
+  min-width: 0;
 }
 
 .overview-label {
-  font-size: 13px;
-  color: #909399;
-  margin-bottom: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin-bottom: var(--space-1);
 }
 
 .overview-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #409eff;
+  font-size: var(--font-size-h1);
+  color: var(--color-text-1);
 }
 
-/* 积分变更颜色 */
+/* === Points colors === */
 .points-up {
-  color: #67c23a;
-  font-weight: 600;
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
 }
 
 .points-down {
-  color: #f56c6c;
-  font-weight: 600;
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
 }
 
+/* === Pagination === */
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
-/* 小屏适配 */
+/* === Responsive === */
 @media (max-width: 768px) {
-  .user-info {
+  .header-body {
     flex-direction: column;
+    align-items: center;
     text-align: center;
+    gap: var(--space-3);
+    padding: 0 var(--space-4) var(--space-5);
+  }
+
+  .avatar-uploader {
+    margin-top: -48px;
+  }
+
+  .user-meta {
+    align-items: center;
+    padding-bottom: 0;
+  }
+
+  .user-name-row {
+    justify-content: center;
+  }
+
+  .user-detail-row {
+    justify-content: center;
+  }
+
+  .header-stats {
+    justify-content: center;
+    padding-bottom: 0;
+  }
+
+  .overview-item {
+    flex: 1 1 100%;
   }
 }
 </style>

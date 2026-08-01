@@ -76,7 +76,7 @@ public class SecurityConfig {
                                 // WebSocket 端点：STOMP 鉴权在 ChannelInterceptor 的 CONNECT 帧完成
                                 "/ws/**"
                         ).permitAll()
-                        // 公开浏览接口：板块、帖子、标签的查询对游客开放，
+                        // 公开浏览接口：板块、帖子、标签、用户主页的查询对游客开放，
                         // 写操作（POST/PUT/DELETE）由 @PreAuthorize 在方法级拦截
                         .requestMatchers(
                                 org.springframework.http.HttpMethod.GET,
@@ -85,7 +85,12 @@ public class SecurityConfig {
                                 "/api/posts",
                                 "/api/posts/**",
                                 "/api/tags",
-                                "/api/tags/**"
+                                "/api/tags/**",
+                                "/api/users",
+                                "/api/users/**",
+                                "/api/clubs",
+                                "/api/clubs/**",
+                                "/api/comments/**"
                         ).permitAll()
                         // 放行 OPTIONS 预检请求
                         .requestMatchers("OPTIONS").permitAll()

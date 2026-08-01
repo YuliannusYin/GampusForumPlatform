@@ -309,6 +309,89 @@ CREATE TABLE `file_record` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件记录表';
 
+-- ======================================================================
+-- 17. 关注关系表
+-- ======================================================================
+DROP TABLE IF EXISTS `follow`;
+CREATE TABLE `follow` (
+    `id`           BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `follower_id`  BIGINT   NOT NULL COMMENT '关注者用户ID',
+    `following_id` BIGINT   NOT NULL COMMENT '被关注者用户ID',
+    `create_time`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`      TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_follower_following` (`follower_id`, `following_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='关注关系表';
+
+-- ======================================================================
+-- 18. 社团表
+-- ======================================================================
+DROP TABLE IF EXISTS `club`;
+CREATE TABLE `club` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '社团ID',
+    `name`        VARCHAR(100) NOT NULL COMMENT '社团名称',
+    `description` VARCHAR(500) DEFAULT NULL COMMENT '社团简介',
+    `logo`        VARCHAR(255) DEFAULT NULL COMMENT '社团Logo URL',
+    `creator_id`  BIGINT       NOT NULL COMMENT '创建者用户ID',
+    `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态 0待审核 1正常 2禁用',
+    `member_count` INT         NOT NULL DEFAULT 0 COMMENT '成员数',
+    `post_count`  INT          NOT NULL DEFAULT 0 COMMENT '帖子数',
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='社团表';
+
+-- ======================================================================
+-- 19. 社团成员表
+-- ======================================================================
+DROP TABLE IF EXISTS `club_member`;
+CREATE TABLE `club_member` (
+    `id`          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `club_id`     BIGINT   NOT NULL COMMENT '社团ID',
+    `user_id`     BIGINT   NOT NULL COMMENT '用户ID',
+    `role`        TINYINT  NOT NULL DEFAULT 0 COMMENT '角色 0普通成员 1社长',
+    `joined_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`     TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_club_user` (`club_id`, `user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='社团成员表';
+
+-- ======================================================================
+-- 20. 社团帖子关联表
+-- ======================================================================
+DROP TABLE IF EXISTS `club_post`;
+CREATE TABLE `club_post` (
+    `id`          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `club_id`     BIGINT   NOT NULL COMMENT '社团ID',
+    `post_id`     BIGINT   NOT NULL COMMENT '帖子ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`     TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_club_post` (`club_id`, `post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='社团帖子关联表';
+
+-- ======================================================================
+-- 21. 用户设置表
+-- ======================================================================
+DROP TABLE IF EXISTS `user_setting`;
+CREATE TABLE `user_setting` (
+    `id`            BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id`       BIGINT   NOT NULL COMMENT '用户ID',
+    `notify_comment` TINYINT NOT NULL DEFAULT 1 COMMENT '评论通知开关 1开启 0关闭',
+    `notify_like`   TINYINT  NOT NULL DEFAULT 1 COMMENT '点赞通知开关 1开启 0关闭',
+    `notify_message` TINYINT NOT NULL DEFAULT 1 COMMENT '私信通知开关 1开启 0关闭',
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`       TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户设置表';
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ======================================================================
@@ -318,16 +401,26 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ---------- 角色 ----------
 INSERT INTO `role` (`id`, `code`, `name`, `description`) VALUES
     (1, 'ROLE_USER',  '普通用户', '普通注册用户，拥有基础操作权限'),
-    (2, 'ROLE_ADMIN', '管理员',   '系统管理员，拥有后台管理权限');
+    (2, 'ROLE_ADMIN', '管理员',   '系统管理员，拥有后台管理权限'),
+    (3, 'ROLE_SUPER_ADMIN', '超级管理员', '网站超级管理员，管理管理员账号与网站级设置');
 
 -- ---------- 管理员账号 ----------
 -- 默认密码：admin123（BCrypt 加密）
 INSERT INTO `user` (`id`, `username`, `password`, `email`, `nickname`, `gender`, `points`, `level`, `status`) VALUES
     (1, 'admin', '$2a$10$E5oYA2DyrWNWT14lAiembuBOAxhdLEj5AIOPGVQZvsh4/YABrNDa2', 'admin@campus.edu', '管理员', 0, 0, 99, 0);
 
+-- ---------- 超级管理员账号 ----------
+-- 默认密码：super123（BCrypt 加密）
+INSERT INTO `user` (`id`, `username`, `password`, `email`, `nickname`, `gender`, `points`, `level`, `status`) VALUES
+    (2, 'superadmin', '$2a$10$r5PYbKmxz/UyBx46HAgHt.xIiYA3k7j1Uj7.0AKMuWAfiaEJbL7HS', 'superadmin@campus.edu', '超级管理员', 0, 0, 99, 0);
+
 -- ---------- 给 admin 分配 ROLE_ADMIN 角色 ----------
 INSERT INTO `user_role` (`user_id`, `role_id`) VALUES
     (1, 2);
+
+-- ---------- 给 superadmin 分配 ROLE_SUPER_ADMIN 角色 ----------
+INSERT INTO `user_role` (`user_id`, `role_id`) VALUES
+    (2, 3);
 
 -- ---------- 默认板块 ----------
 INSERT INTO `section` (`id`, `name`, `description`, `icon`, `sort`) VALUES

@@ -2,25 +2,33 @@
   <div class="post-detail" v-loading="loading">
     <template v-if="post">
       <!-- 顶部信息卡片：标题、作者、统计 -->
-      <el-card class="post-header" shadow="never">
-        <!-- 标题行 -->
-        <div class="title-row">
-          <el-tag v-if="post.isTop" type="danger" size="small" effect="dark">置顶</el-tag>
-          <el-tag v-if="post.isEssence" type="warning" size="small" effect="dark">精华</el-tag>
-          <h1 class="post-title">{{ post.title }}</h1>
+      <el-card class="post-header fade-in-up" shadow="never">
+        <!-- 标签行：置顶 / 精华 -->
+        <div v-if="post.isTop || post.isEssence" class="badge-row">
+          <span v-if="post.isTop" class="badge-chip badge-top">
+            <el-icon><Top /></el-icon> 置顶
+          </span>
+          <span v-if="post.isEssence" class="badge-chip badge-essence">
+            <el-icon><Medal /></el-icon> 精华
+          </span>
         </div>
+
+        <!-- 标题 -->
+        <h1 class="post-title">{{ post.title }}</h1>
 
         <!-- 作者信息 -->
         <div class="author-info">
-          <el-avatar :size="44" :src="post.userAvatar">{{ initialOf(post.username) }}</el-avatar>
+          <el-avatar :size="44" :src="post.userAvatar" class="author-avatar" @click="goAuthorProfile">
+            {{ initialOf(post.username) }}
+          </el-avatar>
           <div class="author-meta">
-            <span class="author-name">{{ post.username }}</span>
+            <span class="author-name" @click="goAuthorProfile">{{ post.username }}</span>
             <span class="post-time">
               <el-icon><Clock /></el-icon>
               {{ formatTime(post.createTime) }}
             </span>
           </div>
-          <el-tag v-if="post.sectionName" class="section-tag" effect="plain" size="small">
+          <el-tag v-if="post.sectionName" class="section-tag" effect="plain" size="small" round>
             {{ post.sectionName }}
           </el-tag>
         </div>
@@ -60,44 +68,49 @@
       </el-card>
 
       <!-- 正文：Markdown 渲染 -->
-      <el-card class="post-content" shadow="never">
+      <el-card class="post-content fade-in-up delay-1" shadow="never">
         <MdPreview :model-value="post.content" />
       </el-card>
 
       <!-- 操作栏 -->
-      <el-card class="post-actions" shadow="never">
+      <div class="post-actions fade-in-up delay-2">
         <el-button
           :type="liked ? 'primary' : 'default'"
+          class="action-chip"
+          round
           :loading="likeLoading"
           @click="handleLike"
         >
           <el-icon><Pointer /></el-icon>
-          {{ liked ? '已赞' : '点赞' }}
+          <span>{{ liked ? '已赞' : '点赞' }}</span>
         </el-button>
         <el-button
           :type="favorited ? 'warning' : 'default'"
+          class="action-chip"
+          round
           :loading="favLoading"
           @click="handleFavorite"
         >
           <el-icon><Star /></el-icon>
-          {{ favorited ? '已收藏' : '收藏' }}
+          <span>{{ favorited ? '已收藏' : '收藏' }}</span>
         </el-button>
-        <el-button v-if="isAuthor" @click="goEdit">
+        <el-button v-if="isAuthor" class="action-chip" round @click="goEdit">
           <el-icon><Edit /></el-icon>
           编辑
         </el-button>
-        <el-button v-if="isAuthor" type="danger" plain :loading="deleteLoading" @click="handleDelete">
+        <el-button v-if="isAuthor" type="danger" plain class="action-chip" round :loading="deleteLoading" @click="handleDelete">
           <el-icon><Delete /></el-icon>
           删除
         </el-button>
-      </el-card>
+      </div>
 
       <!-- 评论区 -->
-      <el-card class="comment-section" shadow="never">
+      <el-card class="comment-section fade-in-up delay-3" shadow="never">
         <template #header>
           <div class="comment-header">
             <el-icon><ChatDotRound /></el-icon>
-            <span>评论 ({{ post.commentCount || 0 }})</span>
+            <span>评论</span>
+            <span class="comment-count">{{ post.commentCount || 0 }}</span>
           </div>
         </template>
         <CommentList :post-id="postId" />
@@ -181,7 +194,6 @@ const fetchInteractions = async () => {
 const handleLike = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再点赞')
-    router.push({ path: '/login', query: { redirect: `/post/${postId.value}` } })
     return
   }
   likeLoading.value = true
@@ -202,7 +214,6 @@ const handleLike = async () => {
 const handleFavorite = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再收藏')
-    router.push({ path: '/login', query: { redirect: `/post/${postId.value}` } })
     return
   }
   favLoading.value = true
@@ -222,6 +233,13 @@ const handleFavorite = async () => {
 // 跳转编辑页
 const goEdit = () => {
   router.push(`/post/edit/${postId.value}`)
+}
+
+// 跳转作者用户主页
+const goAuthorProfile = () => {
+  if (post.value && post.value.userId) {
+    router.push(`/user/${post.value.userId}`)
+  }
 }
 
 // 删除帖子（确认后调用）
@@ -260,69 +278,115 @@ onMounted(() => {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
-/* 顶部信息 */
+/* ===== 顶部信息卡片 ===== */
 .post-header {
-  border-radius: 6px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
 }
 
-.title-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+.post-header :deep(.el-card__body) {
+  padding: var(--space-6);
 }
+
+.badge-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  color: #fff;
+}
+
+.badge-top { background: var(--color-danger); }
+.badge-essence { background: var(--gradient-gold); }
 
 .post-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #303133;
-  margin: 0;
-  line-height: 1.4;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  margin: 0 0 var(--space-4);
+  line-height: var(--line-height-tight);
 }
 
 /* 作者信息 */
 .author-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.author-avatar {
+  cursor: pointer;
+  flex-shrink: 0;
+  background: var(--gradient-primary);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
 }
 
 .author-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
+  min-width: 0;
 }
 
 .author-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.author-name:hover {
+  color: var(--color-primary);
 }
 
 .post-time {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  color: #909399;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
 }
 
 .section-tag {
   flex-shrink: 0;
+  background: var(--color-primary-tag-bg);
+  color: var(--color-primary);
 }
 
 /* 标签 */
 .post-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.post-tag {
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 3px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-page);
+  color: var(--color-text-2);
 }
 
 /* 统计信息 */
@@ -330,11 +394,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
-  font-size: 13px;
-  color: #606266;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-lighter);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
 }
 
 .stat-item {
@@ -343,35 +407,121 @@ onMounted(() => {
   gap: 4px;
 }
 
-/* 正文 */
+.stat-item .el-icon {
+  font-size: 15px;
+}
+
+/* ===== 正文卡片 ===== */
 .post-content {
-  border-radius: 6px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
 }
 
-/* 操作栏 */
+.post-content :deep(.el-card__body) {
+  padding: var(--space-6);
+}
+
+.post-content :deep(.md-editor-preview) {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-1);
+}
+
+/* ===== 操作栏（chip 风格） ===== */
 .post-actions {
-  border-radius: 6px;
   display: flex;
-  gap: 8px;
-}
-
-.post-actions :deep(.el-card__body) {
-  display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-3);
   flex-wrap: wrap;
+  padding: var(--space-2) var(--space-1);
 }
 
-/* 评论区 */
+.action-chip {
+  border-radius: var(--radius-full);
+  padding: 10px 22px;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-fast);
+}
+
+.action-chip :deep(.el-icon) {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+/* 未激活的默认 chip */
+.action-chip.el-button--default {
+  border-color: var(--color-border);
+  color: var(--color-text-2);
+  background: var(--color-bg-card);
+}
+
+.action-chip.el-button--default:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary);
+}
+
+/* ===== 评论区 ===== */
 .comment-section {
-  border-radius: 6px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
+}
+
+.comment-section :deep(.el-card__header) {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border-lighter);
+}
+
+.comment-section :deep(.el-card__body) {
+  padding: var(--space-5) var(--space-6);
 }
 
 .comment-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
+  gap: var(--space-2);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+}
+
+.comment-header .el-icon {
+  color: var(--color-primary);
+}
+
+.comment-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-tag-bg);
+  color: var(--color-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .post-header :deep(.el-card__body),
+  .post-content :deep(.el-card__body),
+  .comment-section :deep(.el-card__body) {
+    padding: var(--space-4);
+  }
+  .post-title {
+    font-size: var(--font-size-h2);
+  }
+  .post-stats {
+    gap: var(--space-3);
+  }
+  .action-chip {
+    padding: 7px 14px;
+  }
 }
 </style>

@@ -12,6 +12,7 @@ import com.campus.forum.dto.resp.NotificationVO;
 import com.campus.forum.entity.Notification;
 import com.campus.forum.mapper.NotificationMapper;
 import com.campus.forum.service.NotificationService;
+import com.campus.forum.service.UserSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Notification> implements NotificationService {
 
     private final NotificationMapper notificationMapper;
+    private final UserSettingService userSettingService;
 
     /**
      * 创建通知（公共服务，供其他模块调用）
@@ -45,6 +47,10 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     public void createNotification(Long userId, Long fromUserId, Integer type, String content, Long targetId, Integer targetType) {
         // 接收者为空或自己给自己的操作不产生通知
         if (userId == null || userId.equals(fromUserId)) {
+            return;
+        }
+        // 检查接收方通知偏好，若关闭则不生成通知
+        if (!userSettingService.isNotifyEnabled(userId, type)) {
             return;
         }
         Notification notification = new Notification();

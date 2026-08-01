@@ -1,22 +1,47 @@
 <template>
   <div class="post-list" v-loading="loading">
-    <!-- 排序切换 -->
+    <!-- Sort bar -->
     <div class="sort-bar">
-      <el-radio-group v-model="currentSort" size="default" @change="handleSortChange">
-        <el-radio-button value="latest">最新</el-radio-button>
-        <el-radio-button value="hot">最热</el-radio-button>
-      </el-radio-group>
+      <button
+        v-for="opt in sortOptions"
+        :key="opt.value"
+        class="sort-btn"
+        :class="{ active: currentSort === opt.value }"
+        @click="changeSort(opt.value)"
+      >
+        <el-icon><component :is="opt.icon" /></el-icon>
+        {{ opt.label }}
+      </button>
     </div>
 
-    <!-- 帖子列表 -->
+    <!-- Post list -->
     <div v-if="postList.length" class="list-wrap">
-      <PostCard v-for="post in postList" :key="post.id" :post="post" />
+      <PostCard
+        v-for="(post, index) in postList"
+        :key="post.id"
+        :post="post"
+        class="fade-in-up"
+        :style="{ animationDelay: `${index * 0.04}s` }"
+      />
     </div>
 
-    <!-- 空状态 -->
-    <el-empty v-else-if="!loading" description="暂无帖子" />
+    <!-- Empty -->
+    <div v-else-if="!loading" class="empty-state">
+      <div class="empty-icon">
+        <svg viewBox="0 0 120 120" width="100" height="100" fill="none">
+          <circle cx="60" cy="60" r="50" fill="#EBF1FF"/>
+          <rect x="35" y="40" width="50" height="40" rx="6" fill="#fff" stroke="#1664FF" stroke-width="2"/>
+          <line x1="42" y1="52" x2="68" y2="52" stroke="#97BCFF" stroke-width="3" stroke-linecap="round"/>
+          <line x1="42" y1="60" x2="78" y2="60" stroke="#97BCFF" stroke-width="3" stroke-linecap="round"/>
+          <line x1="42" y1="68" x2="60" y2="68" stroke="#97BCFF" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="88" cy="78" r="14" fill="#1664FF"/>
+          <path d="M83 78l3.5 3.5L93 74" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="empty-text">暂无帖子，快来发布第一篇吧</p>
+    </div>
 
-    <!-- 分页 -->
+    <!-- Pagination -->
     <div v-if="total > 0" class="pagination-wrap">
       <el-pagination
         v-model:current-page="currentPage"
@@ -32,37 +57,34 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, markRaw } from 'vue'
+import { Clock, TrendCharts } from '@element-plus/icons-vue'
 import { getPosts } from '@/api/post'
 import PostCard from '@/components/PostCard.vue'
 
 const props = defineProps({
-  // 板块 ID（可选，传入则只查该板块的帖子）
   sectionId: {
     type: [Number, String],
     default: ''
   },
-  // 排序方式：latest 最新 / hot 最热
   sort: {
     type: String,
     default: 'latest'
   }
 })
 
-// 当前排序
+const sortOptions = [
+  { value: 'latest', label: '最新', icon: markRaw(Clock) },
+  { value: 'hot', label: '最热', icon: markRaw(TrendCharts) }
+]
+
 const currentSort = ref(props.sort)
-// 当前页码
 const currentPage = ref(1)
-// 每页条数
 const pageSize = ref(10)
-// 帖子总数
 const total = ref(0)
-// 帖子列表
 const postList = ref([])
-// 加载状态
 const loading = ref(false)
 
-// 拉取帖子列表
 const fetchPosts = async () => {
   loading.value = true
   try {
@@ -71,16 +93,13 @@ const fetchPosts = async () => {
       size: pageSize.value,
       sort: currentSort.value
     }
-    // 板块过滤
     if (props.sectionId !== '' && props.sectionId !== undefined && props.sectionId !== null) {
       params.sectionId = props.sectionId
     }
     const res = await getPosts(params)
-    // 兼容后端返回结构：{ records, total, page, size }
     postList.value = res.records || []
     total.value = res.total || 0
   } catch (err) {
-    // 错误已由 request.js 拦截器统一提示
     postList.value = []
     total.value = 0
   } finally {
@@ -88,37 +107,29 @@ const fetchPosts = async () => {
   }
 }
 
-// 排序切换
-const handleSortChange = () => {
+const changeSort = (val) => {
+  if (val === currentSort.value) return
+  currentSort.value = val
   currentPage.value = 1
   fetchPosts()
 }
 
-// 翻页
 const handlePageChange = () => {
   fetchPosts()
 }
 
-// 监听 sectionId 变化（板块切换时重置并重新加载）
-watch(
-  () => props.sectionId,
-  () => {
+watch(() => props.sectionId, () => {
+  currentPage.value = 1
+  fetchPosts()
+})
+
+watch(() => props.sort, (val) => {
+  if (val !== currentSort.value) {
+    currentSort.value = val
     currentPage.value = 1
     fetchPosts()
   }
-)
-
-// 监听外部 sort 变化，同步内部状态
-watch(
-  () => props.sort,
-  (val) => {
-    if (val !== currentSort.value) {
-      currentSort.value = val
-      currentPage.value = 1
-      fetchPosts()
-    }
-  }
-)
+})
 
 onMounted(() => {
   fetchPosts()
@@ -130,27 +141,90 @@ onMounted(() => {
   min-height: 200px;
 }
 
-/* 排序栏 */
+/* Sort bar */
 .sort-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background-color: #fff;
-  border-radius: 4px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-1);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-light);
+  width: fit-content;
 }
 
-/* 列表区域 */
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px var(--space-4);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.sort-btn:hover {
+  color: var(--color-text-1);
+  background: var(--color-bg-hover);
+}
+
+.sort-btn.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+}
+
+.sort-btn .el-icon {
+  font-size: 15px;
+}
+
+/* List */
 .list-wrap {
   display: flex;
   flex-direction: column;
 }
 
-/* 分页 */
+/* Empty */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: var(--space-4);
+}
+
+.empty-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+}
+
+/* Pagination */
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .sort-bar {
+    width: 100%;
+  }
+
+  .sort-btn {
+    flex: 1;
+    justify-content: center;
+  }
 }
 </style>
