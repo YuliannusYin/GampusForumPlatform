@@ -1,15 +1,18 @@
 <template>
   <div class="club-page">
     <!-- 顶部搜索栏 -->
-    <el-card class="search-card" shadow="never">
+    <div class="search-card fade-in-up">
       <div class="search-bar">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索社团名称"
-          clearable
-          class="search-input"
-          @keyup.enter="handleSearch"
-        />
+        <div class="search-input-wrap">
+          <el-icon class="search-icon"><Search /></el-icon>
+          <el-input
+            v-model="keyword"
+            placeholder="搜索社团名称"
+            clearable
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+        </div>
         <el-button type="primary" @click="handleSearch">
           <el-icon><Search /></el-icon>
           搜索
@@ -19,41 +22,66 @@
           创建社团
         </el-button>
       </div>
-    </el-card>
+    </div>
 
     <!-- 社团列表 -->
     <div class="club-list" v-loading="loading">
-      <el-empty v-if="!loading && clubs.length === 0" description="暂无社团" />
-      <el-row v-else :gutter="16">
+      <!-- 空状态 -->
+      <div v-if="!loading && clubs.length === 0" class="empty-state fade-in-up">
+        <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="80" cy="80" r="72" fill="var(--color-primary-bg)" />
+          <rect x="52" y="50" width="56" height="56" rx="14" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="3" />
+          <circle cx="80" cy="68" r="12" fill="var(--color-primary)" opacity="0.2" />
+          <path d="M64 96 C64 84 70 80 80 80 C90 80 96 84 96 96" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.4" />
+          <circle cx="44" cy="50" r="6" fill="var(--color-primary)" opacity="0.15" />
+          <circle cx="120" cy="110" r="5" fill="var(--color-primary)" opacity="0.1" />
+          <rect x="68" y="60" width="24" height="3" rx="1.5" fill="var(--color-primary)" opacity="0.3" />
+        </svg>
+        <p class="empty-text">暂无社团</p>
+        <p class="empty-subtext">快来创建第一个社团吧</p>
+      </div>
+      <el-row v-else :gutter="20">
         <el-col
-          v-for="club in clubs"
+          v-for="(club, index) in clubs"
           :key="club.id"
           :xs="24"
           :sm="12"
           :md="8"
         >
-          <el-card class="club-card" shadow="hover" @click="goDetail(club.id)">
-            <div class="club-name-row">
-              <span class="club-name">{{ club.name }}</span>
-              <el-tag v-if="club.status === 0" type="warning" size="small">待审核</el-tag>
-              <el-tag v-else-if="club.status === 2" type="danger" size="small">禁用</el-tag>
+          <div
+            class="club-card fade-in-up"
+            :style="{ animationDelay: `${index * 0.06}s` }"
+            @click="goDetail(club.id)"
+          >
+            <!-- 渐变头部 -->
+            <div class="card-gradient-header">
+              <div class="header-pattern"></div>
+              <el-tag v-if="club.status === 0" type="warning" size="small" class="status-tag" round>待审核</el-tag>
+              <el-tag v-else-if="club.status === 2" type="danger" size="small" class="status-tag" round>禁用</el-tag>
+              <el-tag v-else type="success" size="small" class="status-tag" round>正常</el-tag>
             </div>
-            <div class="club-desc text-ellipsis-2">{{ club.description || '暂无简介' }}</div>
-            <div class="club-footer">
-              <span class="club-stat">
-                <el-icon><User /></el-icon>
-                {{ club.memberCount || 0 }} 成员
-              </span>
-              <span class="club-stat">
-                <el-icon><Document /></el-icon>
-                {{ club.postCount || 0 }} 帖子
-              </span>
-              <span class="club-time">
-                <el-icon><Clock /></el-icon>
-                {{ formatTime(club.createTime) }}
-              </span>
+            <!-- 卡片内容 -->
+            <div class="card-body">
+              <div class="club-name-row">
+                <span class="club-name">{{ club.name }}</span>
+              </div>
+              <div class="club-desc text-ellipsis-2">{{ club.description || '暂无简介' }}</div>
+              <div class="club-footer">
+                <span class="club-stat">
+                  <el-icon><User /></el-icon>
+                  {{ club.memberCount || 0 }}
+                </span>
+                <span class="club-stat">
+                  <el-icon><Document /></el-icon>
+                  {{ club.postCount || 0 }}
+                </span>
+                <span class="club-time">
+                  <el-icon><Clock /></el-icon>
+                  {{ formatTime(club.createTime) }}
+                </span>
+              </div>
             </div>
-          </el-card>
+          </div>
         </el-col>
       </el-row>
     </div>
@@ -210,63 +238,131 @@ onMounted(() => {
 .club-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
 /* 搜索栏 */
 .search-card {
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-3);
+  z-index: 1;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.search-input-wrap :deep(.el-input__wrapper) {
+  padding-left: 36px;
+  border-radius: var(--radius-full);
 }
 
 .search-input {
-  max-width: 320px;
+  width: 100%;
 }
 
-/* 社团卡片 */
+/* 社团列表 */
 .club-list {
   min-height: 200px;
 }
 
+/* 社团卡片 */
 .club-card {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-5);
   cursor: pointer;
-  border-radius: 6px;
-  transition: transform 0.15s ease;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
+  transition: all var(--transition-base);
+  opacity: 0;
 }
 
 .club-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-4);
+  border-color: var(--color-primary-3);
+}
+
+/* 渐变头部 */
+.card-gradient-header {
+  height: 80px;
+  background: var(--gradient-primary);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--space-3);
+}
+
+.header-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  background-image: radial-gradient(circle at 20% 50%, var(--color-white) 1px, transparent 1px),
+    radial-gradient(circle at 60% 30%, var(--color-white) 1px, transparent 1px),
+    radial-gradient(circle at 80% 70%, var(--color-white) 1.5px, transparent 1.5px);
+  background-size: 30px 30px, 25px 25px, 35px 35px;
+}
+
+.status-tag {
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(4px);
+}
+
+/* 卡片内容 */
+.card-body {
+  padding: var(--space-4);
 }
 
 .club-name-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .club-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-heading);
 }
 
 .club-desc {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
+  line-height: var(--line-height-relaxed);
   min-height: 42px;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-3);
 }
 
 /* 两行省略 */
@@ -281,9 +377,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  font-size: 13px;
-  color: #909399;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-lighter);
 }
 
 .club-stat,
@@ -291,12 +389,64 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: color var(--transition-fast);
+}
+
+.club-card:hover .club-stat {
+  color: var(--color-primary);
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-2);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: 0;
 }
 
 /* 分页 */
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: var(--space-2);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-wrap {
+    max-width: 100%;
+  }
+
+  .search-bar .el-button {
+    width: 100%;
+  }
+
+  .club-card {
+    margin-bottom: var(--space-3);
+  }
+
+  .card-gradient-header {
+    height: 60px;
+  }
 }
 </style>

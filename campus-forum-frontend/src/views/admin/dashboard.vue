@@ -1,52 +1,55 @@
 <template>
   <div class="dashboard-page" v-loading="overviewLoading">
-    <!-- 顶部统计卡片 -->
-    <el-row :gutter="20" class="stat-row">
-      <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="card in statCards" :key="card.key">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-card-body">
-            <el-icon class="stat-icon" :style="{ color: card.color, backgroundColor: card.bg }">
-              <component :is="card.icon" />
-            </el-icon>
-            <div class="stat-meta">
-              <div class="stat-value">{{ card.value }}</div>
-              <div class="stat-label">{{ card.label }}</div>
-            </div>
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">数据概览</h1>
+        <p class="page-subtitle">平台运营数据实时监控</p>
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stat-grid">
+      <div
+        v-for="card in statCards"
+        :key="card.key"
+        class="stat-card fade-in-up"
+        :class="'delay-' + (statCards.indexOf(card) + 1)"
+      >
+        <div class="stat-card-body">
+          <div class="stat-icon-wrap" :class="'grad-' + card.key">
+            <el-icon class="stat-icon"><component :is="card.icon" /></el-icon>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+          <div class="stat-meta">
+            <div class="stat-value">{{ card.value }}</div>
+            <div class="stat-label">{{ card.label }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 图表区 -->
-    <el-row :gutter="20" class="chart-row">
+    <div class="chart-grid">
       <!-- 发帖趋势 -->
-      <el-col :xs="24" :lg="14">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <span class="chart-title">发帖趋势</span>
-              <el-radio-group v-model="trendDays" size="small" @change="loadTrend">
-                <el-radio-button :value="7">近7天</el-radio-button>
-                <el-radio-button :value="30">近30天</el-radio-button>
-              </el-radio-group>
-            </div>
-          </template>
-          <div ref="trendChartRef" class="chart-box"></div>
-        </el-card>
-      </el-col>
+      <div class="chart-card chart-card--trend">
+        <div class="chart-header">
+          <span class="chart-title">发帖趋势</span>
+          <el-radio-group v-model="trendDays" size="small" @change="loadTrend">
+            <el-radio-button :value="7">近7天</el-radio-button>
+            <el-radio-button :value="30">近30天</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div ref="trendChartRef" class="chart-box"></div>
+      </div>
 
       <!-- 板块分布 -->
-      <el-col :xs="24" :lg="10">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <span class="chart-title">板块帖子分布</span>
-            </div>
-          </template>
-          <div ref="pieChartRef" class="chart-box"></div>
-        </el-card>
-      </el-col>
-    </el-row>
+      <div class="chart-card chart-card--pie">
+        <div class="chart-header">
+          <span class="chart-title">板块帖子分布</span>
+        </div>
+        <div ref="pieChartRef" class="chart-box"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -65,13 +68,13 @@ const overview = reactive({
 })
 const overviewLoading = ref(false)
 
-// 统计卡片配置
+// 统计卡片配置（渐变背景由 CSS 类 grad-<key> 控制）
 const statCards = ref([
-  { key: 'totalUsers', label: '总用户数', value: 0, icon: 'User', color: '#409eff', bg: '#ecf5ff' },
-  { key: 'totalPosts', label: '总帖子数', value: 0, icon: 'Document', color: '#67c23a', bg: '#f0f9eb' },
-  { key: 'totalComments', label: '总评论数', value: 0, icon: 'ChatDotRound', color: '#e6a23c', bg: '#fdf6ec' },
-  { key: 'todayNewUsers', label: '今日新增用户', value: 0, icon: 'UserFilled', color: '#f56c6c', bg: '#fef0f0' },
-  { key: 'todayNewPosts', label: '今日新增帖子', value: 0, icon: 'EditPen', color: '#909399', bg: '#f4f4f5' }
+  { key: 'totalUsers', label: '总用户数', value: 0, icon: 'User' },
+  { key: 'totalPosts', label: '总帖子数', value: 0, icon: 'Document' },
+  { key: 'totalComments', label: '总评论数', value: 0, icon: 'ChatDotRound' },
+  { key: 'todayNewUsers', label: '今日新增用户', value: 0, icon: 'UserFilled' },
+  { key: 'todayNewPosts', label: '今日新增帖子', value: 0, icon: 'EditPen' }
 ])
 
 // 趋势图相关
@@ -128,8 +131,8 @@ const loadTrend = async () => {
           type: 'line',
           smooth: true,
           data: counts,
-          itemStyle: { color: '#409eff' },
-          areaStyle: { color: 'rgba(64, 158, 255, 0.15)' }
+          itemStyle: { color: '#1664FF' },
+          areaStyle: { color: 'rgba(22, 100, 255, 0.15)' }
         }
       ]
     })
@@ -204,34 +207,92 @@ onUnmounted(() => {
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-6);
 }
 
-/* 统计卡片 */
-.stat-row {
-  margin-bottom: 0;
+/* ===== 页面标题 ===== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-1) 0 0;
+}
+
+/* ===== 统计卡片 ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
 }
 
 .stat-card {
-  margin-bottom: 20px;
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-3);
 }
 
 .stat-card-body {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
-.stat-icon {
+.stat-icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  font-size: 28px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
+}
+
+.stat-icon {
+  font-size: 26px;
+  color: var(--color-white);
+}
+
+/* Gradient backgrounds by card key */
+.grad-totalUsers {
+  background: var(--gradient-primary);
+}
+
+.grad-totalPosts {
+  background: var(--gradient-mint);
+}
+
+.grad-totalComments {
+  background: var(--gradient-gold);
+}
+
+.grad-todayNewUsers {
+  background: var(--gradient-sunset);
+}
+
+.grad-todayNewPosts {
+  background: var(--gradient-purple);
 }
 
 .stat-meta {
@@ -240,41 +301,96 @@ onUnmounted(() => {
 }
 
 .stat-value {
+  font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text-1);
   line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 13px;
-  color: #909399;
-  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin-top: var(--space-1);
 }
 
-/* 图表区 */
-.chart-row {
-  margin-bottom: 0;
+/* ===== 图表区 ===== */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 14fr 10fr;
+  gap: var(--space-4);
 }
 
 .chart-card {
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
 }
 
 .chart-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .chart-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
 }
 
 .chart-box {
   width: 100%;
   height: 360px;
+  padding: var(--space-3);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1200px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: var(--space-4);
+  }
+
+  .stat-icon-wrap {
+    width: 44px;
+    height: 44px;
+  }
+
+  .stat-icon {
+    font-size: 22px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .chart-box {
+    height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

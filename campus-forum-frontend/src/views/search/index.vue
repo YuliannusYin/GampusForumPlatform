@@ -1,44 +1,75 @@
 <template>
   <div class="search-page">
     <!-- 搜索框 -->
-    <el-card class="search-bar-card" shadow="never">
+    <div class="search-bar-card fade-in-up">
       <div class="search-bar">
-        <el-input
-          v-model="keyword"
-          placeholder="请输入关键字搜索帖子"
-          clearable
-          size="large"
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button type="primary" size="large" :loading="loading" @click="handleSearch">搜索</el-button>
+        <div class="search-input-wrap">
+          <el-icon class="search-icon"><Search /></el-icon>
+          <el-input
+            v-model="keyword"
+            placeholder="请输入关键字搜索帖子"
+            clearable
+            size="large"
+            @keyup.enter="handleSearch"
+          />
+        </div>
+        <el-button type="primary" size="large" :loading="loading" @click="handleSearch">
+          <el-icon><Search /></el-icon>
+          搜索
+        </el-button>
       </div>
       <!-- 当前标签过滤提示 -->
       <div v-if="activeTag" class="tag-filter">
-        <span>当前标签：</span>
-        <el-tag closable @close="clearTag">标签 #{{ activeTag }}</el-tag>
+        <span class="filter-label">当前标签：</span>
+        <el-tag closable @close="clearTag" round>标签 #{{ activeTag }}</el-tag>
       </div>
-    </el-card>
+    </div>
+
+    <!-- 过滤标签栏 -->
+    <div class="filter-tabs fade-in-up delay-1">
+      <div class="filter-tab active">
+        <el-icon><Document /></el-icon>
+        帖子
+      </div>
+      <div class="filter-tab disabled">
+        <el-icon><User /></el-icon>
+        用户
+      </div>
+      <div class="filter-tab disabled">
+        <el-icon><PriceTag /></el-icon>
+        标签
+      </div>
+    </div>
 
     <!-- 搜索结果 -->
-    <el-card class="result-card" shadow="never">
+    <div class="result-card fade-in-up delay-2">
       <div class="result-header">
         <span class="result-title">
           搜索结果<template v-if="total > 0">（共 {{ total }} 条）</template>
         </span>
+        <span v-if="keyword" class="result-query">关键词： "{{ keyword }}"</span>
       </div>
 
       <div v-loading="loading">
         <!-- 结果列表 -->
         <div v-if="resultList.length" class="result-list">
-          <PostCard v-for="post in resultList" :key="post.id" :post="post" />
+          <PostCard v-for="(post, index) in resultList" :key="post.id" :post="post" class="result-item fade-in-up" :style="{ animationDelay: `${index * 0.04}s` }" />
         </div>
 
         <!-- 空状态 -->
-        <el-empty v-else-if="!loading" description="暂无搜索结果" />
+        <div v-else-if="!loading" class="empty-state">
+          <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="80" r="72" fill="var(--color-primary-bg)" />
+            <circle cx="68" cy="68" r="28" fill="var(--color-bg-card)" stroke="var(--color-primary)" stroke-width="3" />
+            <path d="M88 88 L108 108" stroke="var(--color-primary)" stroke-width="4" stroke-linecap="round" />
+            <path d="M58 68 L78 68" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" opacity="0.3" />
+            <path d="M58 76 L72 76" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" opacity="0.2" />
+            <circle cx="44" cy="120" r="5" fill="var(--color-primary)" opacity="0.15" />
+            <circle cx="116" cy="48" r="4" fill="var(--color-primary)" opacity="0.1" />
+          </svg>
+          <p class="empty-text">暂无搜索结果</p>
+          <p class="empty-subtext">试试换个关键词搜索吧</p>
+        </div>
       </div>
 
       <!-- 分页 -->
@@ -53,7 +84,7 @@
           @current-change="handlePageChange"
         />
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -160,56 +191,192 @@ onMounted(() => {
 .search-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* 搜索栏 */
 .search-bar-card {
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
 }
 
 .search-bar {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.search-bar .el-input {
+.search-input-wrap {
+  position: relative;
   flex: 1;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-3);
+  z-index: 1;
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.search-input-wrap :deep(.el-input__wrapper) {
+  padding-left: 42px;
+  border-radius: var(--radius-full);
 }
 
 .tag-filter {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  font-size: 13px;
-  color: #606266;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
+}
+
+.filter-label {
+  font-weight: var(--font-weight-medium);
+}
+
+/* 过滤标签栏 */
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-bg-card);
+  color: var(--color-text-3);
+  border: 1px solid var(--color-border-light);
+}
+
+.filter-tab.active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary-3);
+  box-shadow: var(--shadow-1);
+}
+
+.filter-tab.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 结果卡片 */
 .result-card {
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-1);
 }
 
 .result-header {
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-lighter);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .result-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  font-family: var(--font-heading);
+}
+
+.result-query {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
 }
 
 .result-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+}
+
+.result-item {
+  opacity: 0;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-2);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: 0;
 }
 
 /* 分页 */
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: var(--space-5);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+  }
+
+  .search-bar-card {
+    padding: var(--space-3);
+  }
+
+  .filter-tabs {
+    overflow-x: auto;
+    padding: 0;
+  }
+
+  .filter-tab {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-caption);
+    white-space: nowrap;
+  }
+
+  .result-card {
+    padding: var(--space-3);
+  }
+
+  .result-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

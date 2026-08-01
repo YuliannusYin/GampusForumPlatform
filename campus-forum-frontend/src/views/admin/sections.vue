@@ -1,23 +1,42 @@
 <template>
   <div class="sections-page">
-    <el-card shadow="never" class="table-card">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">板块管理</h1>
+        <p class="page-subtitle">管理论坛板块与分类</p>
+      </div>
+    </div>
+
+    <div class="table-card">
       <!-- 顶部操作栏 -->
       <div class="toolbar">
         <span class="toolbar-title">板块列表</span>
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增板块</el-button>
       </div>
 
-      <el-table :data="list" v-loading="loading" border stripe>
-        <el-table-column prop="name" label="名称" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="icon" label="图标" width="120" align="center" show-overflow-tooltip>
+      <el-table :data="list" v-loading="loading" class="admin-table">
+        <el-table-column label="名称" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.icon">{{ row.icon }}</span>
+            <div class="section-name-cell">
+              <span class="section-dot" :class="'dot-color-' + (row.id % 8)"></span>
+              <span class="section-name-text">{{ row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="icon" label="图标" width="100" align="center">
+          <template #default="{ row }">
+            <div v-if="row.icon" class="section-icon-box">{{ row.icon }}</div>
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="sort" label="排序" width="90" align="center" />
-        <el-table-column prop="postCount" label="帖子数" width="100" align="center" />
+        <el-table-column label="帖子数" width="110" align="center">
+          <template #default="{ row }">
+            <span class="count-chip">{{ row.postCount || 0 }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="openEditDialog(row)">编辑</el-button>
@@ -25,7 +44,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog
@@ -193,27 +212,119 @@ onMounted(() => {
 .sections-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
+/* ===== 页面标题 ===== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin: var(--space-1) 0 0;
+}
+
+/* ===== 表格卡片 ===== */
 .table-card {
-  border-radius: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .toolbar-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+}
+
+.admin-table {
+  border-radius: 0;
+}
+
+/* Section name cell with colored dot */
+.section-name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dot-color-0 { background: var(--color-primary); }
+.dot-color-1 { background: var(--color-success); }
+.dot-color-2 { background: var(--color-warning); }
+.dot-color-3 { background: var(--color-danger); }
+.dot-color-4 { background: var(--color-violet); }
+.dot-color-5 { background: var(--color-teal); }
+.dot-color-6 { background: var(--color-coral); }
+.dot-color-7 { background: var(--color-primary-hover); }
+
+.section-name-text {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-1);
+}
+
+/* Section icon box */
+.section-icon-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-page);
+  font-size: 20px;
 }
 
 .text-muted {
-  color: #c0c4cc;
+  color: var(--color-text-4);
+}
+
+/* Post count chip */
+.count-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: var(--space-3) var(--space-4);
+  }
 }
 </style>

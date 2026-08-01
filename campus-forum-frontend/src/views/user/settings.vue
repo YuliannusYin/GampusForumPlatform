@@ -1,16 +1,21 @@
 <template>
   <div class="settings-page">
-    <el-tabs v-model="activeTab" class="settings-tabs" @tab-change="handleTabChange">
+    <!-- Page header -->
+    <div class="page-header fade-in-up">
+      <div class="section-title">账号设置</div>
+    </div>
+
+    <el-tabs v-model="activeTab" class="settings-tabs fade-in-up delay-1" @tab-change="handleTabChange">
       <!-- 基本资料 -->
       <el-tab-pane label="基本资料" name="profile">
         <el-card shadow="never" class="section-card">
           <template #header>
-            <span class="card-title">编辑资料</span>
+            <div class="section-title">编辑资料</div>
           </template>
           <el-form ref="profileFormRef" :model="profileForm" label-width="80px">
             <el-form-item label="头像">
               <div class="form-avatar">
-                <el-avatar :size="80" :src="profileForm.avatar">
+                <el-avatar :size="64" :src="profileForm.avatar" class="form-avatar-img">
                   {{ usernameInitial }}
                 </el-avatar>
                 <el-upload
@@ -62,7 +67,7 @@
       <el-tab-pane label="账号安全" name="security">
         <el-card shadow="never" class="section-card">
           <template #header>
-            <span class="card-title">修改密码</span>
+            <div class="section-title">修改密码</div>
           </template>
           <el-form
             ref="pwdFormRef"
@@ -108,27 +113,57 @@
       <el-tab-pane label="通知偏好" name="notification">
         <el-card shadow="never" class="section-card" v-loading="settingsLoading">
           <template #header>
-            <span class="card-title">通知偏好</span>
+            <div class="section-title">通知偏好</div>
           </template>
-          <el-form label-width="120px" class="notify-form">
-            <el-form-item label="评论通知">
+          <div class="notify-list">
+            <!-- 评论通知 -->
+            <div class="notify-item">
+              <div class="notify-info">
+                <div class="notify-icon notify-icon-primary">
+                  <el-icon><ChatDotRound /></el-icon>
+                </div>
+                <div class="notify-text">
+                  <div class="notify-name">评论通知</div>
+                  <div class="notify-desc">有人评论你的帖子时通知你</div>
+                </div>
+              </div>
               <el-switch v-model="settingsForm.commentNotify" />
-              <span class="notify-tip">有人评论你的帖子时通知你</span>
-            </el-form-item>
-            <el-form-item label="点赞通知">
+            </div>
+
+            <!-- 点赞通知 -->
+            <div class="notify-item">
+              <div class="notify-info">
+                <div class="notify-icon notify-icon-danger">
+                  <el-icon><Star /></el-icon>
+                </div>
+                <div class="notify-text">
+                  <div class="notify-name">点赞通知</div>
+                  <div class="notify-desc">有人点赞你的帖子或评论时通知你</div>
+                </div>
+              </div>
               <el-switch v-model="settingsForm.likeNotify" />
-              <span class="notify-tip">有人点赞你的帖子或评论时通知你</span>
-            </el-form-item>
-            <el-form-item label="私信通知">
+            </div>
+
+            <!-- 私信通知 -->
+            <div class="notify-item">
+              <div class="notify-info">
+                <div class="notify-icon notify-icon-success">
+                  <el-icon><Message /></el-icon>
+                </div>
+                <div class="notify-text">
+                  <div class="notify-name">私信通知</div>
+                  <div class="notify-desc">收到私信时通知你</div>
+                </div>
+              </div>
               <el-switch v-model="settingsForm.messageNotify" />
-              <span class="notify-tip">收到私信时通知你</span>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="settingsSaving" @click="handleSaveSettings">
-                保存设置
-              </el-button>
-            </el-form-item>
-          </el-form>
+            </div>
+          </div>
+
+          <div class="notify-action">
+            <el-button type="primary" :loading="settingsSaving" @click="handleSaveSettings">
+              保存设置
+            </el-button>
+          </div>
         </el-card>
       </el-tab-pane>
     </el-tabs>
@@ -342,33 +377,175 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+/* === Page Header === */
+.page-header {
+  margin-bottom: var(--space-5);
+}
+
+/* === Tabs === */
+.settings-tabs :deep(.el-tabs__header) {
+  margin-bottom: var(--space-5);
+}
+
+.settings-tabs :deep(.el-tabs__nav-wrap::after) {
+  background-color: var(--color-border-light);
+}
+
+.settings-tabs :deep(.el-tabs__item) {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-body);
+  color: var(--color-text-3);
+  height: 44px;
+}
+
+.settings-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.settings-tabs :deep(.el-tabs__active-bar) {
+  background: var(--gradient-primary);
+  height: 3px;
+  border-radius: var(--radius-full);
+}
+
+/* === Section Card === */
 .section-card {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
 }
 
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+.section-card :deep(.el-card__header) {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-lighter);
 }
 
+.section-card :deep(.el-card__body) {
+  padding: var(--space-5);
+}
+
+/* === Form Avatar === */
 .form-avatar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
+.form-avatar-img {
+  --el-avatar-bg-color: transparent;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+}
+
+/* === Password Form === */
 .pwd-form {
   max-width: 460px;
 }
 
-.notify-form {
-  max-width: 560px;
+/* === Notification Preferences === */
+.notify-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.notify-tip {
-  margin-left: 12px;
-  font-size: 13px;
-  color: #909399;
+.notify-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-subtle);
+  transition: all var(--transition-fast);
+}
+
+.notify-item:hover {
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-1);
+}
+
+.notify-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.notify-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notify-icon-primary {
+  background: var(--color-primary-tag-bg);
+  color: var(--color-primary);
+}
+
+.notify-icon-danger {
+  background: var(--color-danger-tag-bg);
+  color: var(--color-danger);
+}
+
+.notify-icon-success {
+  background: var(--color-success-tag-bg);
+  color: var(--color-success);
+}
+
+.notify-text {
+  min-width: 0;
+}
+
+.notify-name {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  margin-bottom: var(--space-1);
+}
+
+.notify-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  line-height: var(--line-height-normal);
+}
+
+/* === Switch styling === */
+.notify-item :deep(.el-switch.is-checked .el-switch__core) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.notify-action {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-lighter);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .notify-item {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .notify-desc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>

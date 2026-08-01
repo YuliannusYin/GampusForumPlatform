@@ -1,16 +1,19 @@
 <template>
   <div class="public-profile-page" v-loading="profileLoading">
-    <!-- 顶部用户信息卡片 -->
-    <el-card v-if="profile" class="user-card" shadow="never">
-      <div class="user-info">
-        <el-avatar :size="100" :src="profile.avatar" class="user-avatar">
+    <!-- Profile header with gradient cover -->
+    <div v-if="profile" class="profile-header fade-in-up">
+      <div class="header-cover">
+        <div class="cover-decoration"></div>
+      </div>
+      <div class="header-body">
+        <el-avatar :size="96" :src="profile.avatar" class="user-avatar">
           {{ usernameInitial }}
         </el-avatar>
 
         <div class="user-meta">
           <div class="user-name-row">
             <span class="user-nickname">{{ profile.nickname || profile.username || '匿名用户' }}</span>
-            <el-tag type="primary" size="small">Lv.{{ profile.level || 1 }}</el-tag>
+            <el-tag type="primary" size="small" effect="light">Lv.{{ profile.level || 1 }}</el-tag>
           </div>
           <div class="user-bio">{{ profile.bio || '这个人很懒，什么都没留下' }}</div>
           <div class="user-extra">
@@ -25,45 +28,48 @@
           </div>
         </div>
 
-        <!-- 统计数据 -->
+        <!-- Stats -->
         <div class="user-stats">
           <div class="stat-item">
-            <div class="stat-value">{{ profile.followingCount || 0 }}</div>
+            <div class="stat-number stat-value">{{ profile.followingCount || 0 }}</div>
             <div class="stat-label">关注</div>
           </div>
+          <div class="stat-divider"></div>
           <div class="stat-item">
-            <div class="stat-value">{{ profile.followerCount || 0 }}</div>
+            <div class="stat-number stat-value">{{ profile.followerCount || 0 }}</div>
             <div class="stat-label">粉丝</div>
           </div>
+          <div class="stat-divider"></div>
           <div class="stat-item">
-            <div class="stat-value">{{ profile.postCount || 0 }}</div>
+            <div class="stat-number stat-value">{{ profile.postCount || 0 }}</div>
             <div class="stat-label">发帖</div>
           </div>
         </div>
 
-        <!-- 关注按钮：仅登录且非自己时显示 -->
+        <!-- Follow button -->
         <div v-if="showFollowBtn" class="follow-action">
           <el-button
-            :type="isFollowed ? 'info' : 'primary'"
+            :type="isFollowed ? 'default' : 'primary'"
             :loading="followLoading"
             @click="handleToggleFollow"
+            round
           >
-            {{ isFollowed ? '已关注' : '关注' }}
+            {{ isFollowed ? '已关注' : '+ 关注' }}
           </el-button>
         </div>
       </div>
-    </el-card>
+    </div>
 
-    <!-- 主体内容：标签页 -->
-    <el-tabs v-model="activeTab" class="profile-tabs" @tab-change="handleTabChange">
+    <!-- Main content: tabs -->
+    <el-tabs v-model="activeTab" class="profile-tabs fade-in-up delay-1" @tab-change="handleTabChange">
       <!-- 发帖 -->
       <el-tab-pane label="发帖" name="posts">
         <div v-loading="postsLoading" class="list-wrap">
-          <el-card
-            v-for="post in postsList"
+          <div
+            v-for="(post, index) in postsList"
             :key="post.id"
-            class="item-card"
-            shadow="hover"
+            class="item-card fade-in-up"
+            :style="{ animationDelay: (index * 0.05) + 's' }"
             @click="goPost(post.id)"
           >
             <div class="post-title">{{ post.title }}</div>
@@ -82,7 +88,7 @@
                 {{ post.commentCount || 0 }}
               </span>
             </div>
-          </el-card>
+          </div>
           <el-empty v-if="!postsLoading && postsList.length === 0" description="暂无发帖" />
         </div>
         <div class="pagination-wrap" v-if="postsPage.total > 0">
@@ -99,11 +105,11 @@
       <!-- 评论 -->
       <el-tab-pane label="评论" name="comments">
         <div v-loading="commentsLoading" class="list-wrap">
-          <el-card
-            v-for="comment in commentsList"
+          <div
+            v-for="(comment, index) in commentsList"
             :key="comment.id"
-            class="item-card"
-            shadow="hover"
+            class="item-card fade-in-up"
+            :style="{ animationDelay: (index * 0.05) + 's' }"
             @click="goPost(comment.postId)"
           >
             <div class="comment-content text-ellipsis-2">{{ comment.content }}</div>
@@ -113,7 +119,7 @@
                 {{ formatTime(comment.createTime) }}
               </span>
             </div>
-          </el-card>
+          </div>
           <el-empty v-if="!commentsLoading && commentsList.length === 0" description="暂无评论" />
         </div>
         <div class="pagination-wrap" v-if="commentsPage.total > 0">
@@ -130,11 +136,11 @@
       <!-- 社团 -->
       <el-tab-pane label="社团" name="clubs">
         <div v-loading="clubsLoading" class="list-wrap">
-          <el-card
-            v-for="club in clubsList"
+          <div
+            v-for="(club, index) in clubsList"
             :key="club.id"
-            class="item-card"
-            shadow="hover"
+            class="item-card fade-in-up"
+            :style="{ animationDelay: (index * 0.05) + 's' }"
             @click="goClub(club.id)"
           >
             <div class="club-title">
@@ -148,7 +154,7 @@
                 成员数：{{ club.memberCount || 0 }}
               </span>
             </div>
-          </el-card>
+          </div>
           <el-empty v-if="!clubsLoading && clubsList.length === 0" description="暂未加入社团" />
         </div>
       </el-tab-pane>
@@ -362,157 +368,247 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 用户信息卡片 */
-.user-card {
-  margin-bottom: 16px;
+/* === Profile Header === */
+.profile-header {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+  margin-bottom: var(--space-5);
 }
 
-.user-info {
+.header-cover {
+  position: relative;
+  height: 120px;
+  background: var(--gradient-ocean);
+  overflow: hidden;
+}
+
+.cover-decoration {
+  position: absolute;
+  top: -60%;
+  right: 5%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 65%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.header-body {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: var(--space-5);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .user-avatar {
   flex-shrink: 0;
+  margin-top: -48px;
+  border: 4px solid var(--color-bg-card);
+  box-shadow: var(--shadow-2);
+  --el-avatar-bg-color: transparent;
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-h1);
 }
 
 .user-meta {
   flex: 1;
   min-width: 200px;
+  padding-bottom: var(--space-1);
 }
 
 .user-name-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .user-nickname {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-1);
+  line-height: var(--line-height-tight);
 }
 
 .user-bio {
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.6;
-  margin-bottom: 8px;
+  font-size: var(--font-size-body);
+  color: var(--color-text-2);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-2);
 }
 
 .user-extra {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 18px;
-  font-size: 13px;
-  color: #909399;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
 }
 
 .extra-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
+/* === Stats === */
 .user-stats {
   display: flex;
-  gap: 24px;
-  padding: 8px 16px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  flex-shrink: 0;
 }
 
 .stat-item {
   text-align: center;
+  padding: 0 var(--space-2);
 }
 
 .stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #409eff;
+  font-size: var(--font-size-h1);
+  color: var(--color-text-1);
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
+  margin-top: var(--space-1);
+  font-weight: var(--font-weight-medium);
 }
 
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-border-light);
+}
+
+/* === Follow Button === */
 .follow-action {
   flex-shrink: 0;
+  padding-bottom: var(--space-1);
 }
 
-/* 标签页 */
+/* === Tabs === */
 .profile-tabs {
   background-color: transparent;
 }
 
-.list-wrap {
-  min-height: 200px;
+.profile-tabs :deep(.el-tabs__header) {
+  margin-bottom: var(--space-5);
 }
 
+.profile-tabs :deep(.el-tabs__nav-wrap::after) {
+  background-color: var(--color-border-light);
+}
+
+.profile-tabs :deep(.el-tabs__item) {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-body);
+  color: var(--color-text-3);
+  height: 44px;
+}
+
+.profile-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.profile-tabs :deep(.el-tabs__active-bar) {
+  background: var(--gradient-primary);
+  height: 3px;
+  border-radius: var(--radius-full);
+}
+
+/* === List === */
+.list-wrap {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* === Item Card === */
 .item-card {
-  margin-bottom: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: all var(--transition-base);
+  opacity: 0;
 }
 
 .item-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-2);
   transform: translateY(-2px);
 }
 
 .post-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  margin-bottom: var(--space-2);
+  transition: color var(--transition-fast);
 }
 
-.post-title:hover {
-  color: #409eff;
+.item-card:hover .post-title {
+  color: var(--color-primary);
 }
 
 .post-summary,
 .comment-content,
 .club-desc {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.6;
-  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-2);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-3);
 }
 
 .club-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-1);
+  margin-bottom: var(--space-2);
+  transition: color var(--transition-fast);
 }
 
-.club-title:hover {
-  color: #409eff;
+.item-card:hover .club-title {
+  color: var(--color-primary);
 }
 
 .item-footer {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 13px;
-  color: #909399;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-3);
 }
 
 .footer-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
-/* 两行省略 */
+/* === Text ellipsis === */
 .text-ellipsis-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -520,19 +616,45 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* === Pagination === */
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: var(--space-5);
 }
 
-/* 小屏适配 */
+/* === Responsive === */
 @media (max-width: 768px) {
-  .user-info {
+  .header-body {
     flex-direction: column;
+    align-items: center;
     text-align: center;
+    gap: var(--space-3);
+    padding: 0 var(--space-4) var(--space-5);
   }
+
+  .user-avatar {
+    margin-top: -48px;
+  }
+
+  .user-meta {
+    align-items: center;
+    padding-bottom: 0;
+  }
+
+  .user-name-row {
+    justify-content: center;
+  }
+
+  .user-extra {
+    justify-content: center;
+  }
+
   .user-stats {
+    justify-content: center;
+  }
+
+  .pagination-wrap {
     justify-content: center;
   }
 }
