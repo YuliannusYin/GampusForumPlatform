@@ -104,7 +104,7 @@ export function rejectClub(clubId) {
 // ===== 测试数据管理（仅超级管理员）=====
 // 一键导入测试数据
 export function importTestData() {
-  return request.post('/admin/test-data/import')
+  return request.post('/admin/test-data/import', null, { timeout: 120000 })
 }
 
 // 一键移除测试数据

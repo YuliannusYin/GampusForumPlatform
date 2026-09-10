@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    测试数据物理清理 Mapper
+    原生 SQL 不追加 logic-delete 条件，用于清除含 deleted=1 的残留行
+-->
+<mapper namespace="com.campus.forum.mapper.TestDataMapper">
+
+    <sql id="inIds">
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </sql>
+
+    <select id="countActiveTestUsers" resultType="long">
+        SELECT COUNT(*)
+        FROM user
+        WHERE LEFT(username, CHAR_LENGTH(#{prefix})) = #{prefix}
+          AND deleted = 0
+    </select>
+
+    <select id="selectTestUserIds" resultType="long">
+        SELECT id
+        FROM user
+        WHERE LEFT(username, CHAR_LENGTH(#{prefix})) = #{prefix}
+    </select>
+
+    <select id="selectActiveTestUserIds" resultType="long">
+        SELECT id
+        FROM user
+        WHERE LEFT(username, CHAR_LENGTH(#{prefix})) = #{prefix}
+          AND deleted = 0
+    </select>
+
+    <select id="selectTestClubIds" resultType="long">
+        SELECT id
+        FROM club
+        WHERE LEFT(name, CHAR_LENGTH(#{prefix})) = #{prefix}
+    </select>
+
+    <select id="selectActiveTestClubIds" resultType="long">
+        SELECT id
+        FROM club
+        WHERE LEFT(name, CHAR_LENGTH(#{prefix})) = #{prefix}
+          AND deleted = 0
+    </select>
+
+    <select id="selectTestPostIds" resultType="long">
+        SELECT id
+        FROM post
+        WHERE user_id IN
+        <foreach collection="userIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+          AND LEFT(title, CHAR_LENGTH(#{titlePrefix})) = #{titlePrefix}
+    </select>
+
+    <delete id="physicalDeleteClubPostsByClubIds">
+        DELETE FROM club_post WHERE club_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteClubPostsByPostIds">
+        DELETE FROM club_post WHERE post_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteClubMembersByClubIds">
+        DELETE FROM club_member WHERE club_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteClubMembersByUserIds">
+        DELETE FROM club_member WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteClubsByIds">
+        DELETE FROM club WHERE id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeletePostTagsByPostIds">
+        DELETE FROM post_tag WHERE post_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteCommentsByUserIds">
+        DELETE FROM comment WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteLikesByUserIds">
+        DELETE FROM like_record WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteFavoritesByUserIds">
+        DELETE FROM favorite WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteFollowsByUserIds">
+        DELETE FROM follow
+        WHERE follower_id IN <include refid="inIds"/>
+           OR following_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteChatMessagesByUserIds">
+        DELETE FROM chat_message
+        WHERE sender_id IN <include refid="inIds"/>
+           OR receiver_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteChatSessionsByUserIds">
+        DELETE FROM chat_session
+        WHERE user1_id IN <include refid="inIds"/>
+           OR user2_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteNotificationsByUserIds">
+        DELETE FROM notification
+        WHERE user_id IN <include refid="inIds"/>
+           OR from_user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeletePostsByUserIds">
+        DELETE FROM post WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteUserRolesByUserIds">
+        DELETE FROM user_role WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteUserSettingsByUserIds">
+        DELETE FROM user_setting WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteSignInRecordsByUserIds">
+        DELETE FROM sign_in_record WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeletePointsRecordsByUserIds">
+        DELETE FROM points_record WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteFileRecordsByUserIds">
+        DELETE FROM file_record WHERE user_id IN <include refid="inIds"/>
+    </delete>
+
+    <delete id="physicalDeleteUsersByIds">
+        DELETE FROM user WHERE id IN <include refid="inIds"/>
+    </delete>
+
+</mapper>

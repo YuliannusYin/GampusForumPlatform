@@ -61,4 +61,7 @@ public final class TestDataConstants {
     /** 测试社团帖子关联数量 */
     public static final int CLUB_POST_COUNT = 100;
 
+    /** 批量插入每批 flush 条数 */
+    public static final int BATCH_FLUSH_SIZE = 200;
+
 }

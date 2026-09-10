@@ -19,7 +19,6 @@ import com.campus.forum.entity.Follow;
 import com.campus.forum.entity.LikeRecord;
 import com.campus.forum.entity.Notification;
 import com.campus.forum.entity.Post;
-import com.campus.forum.entity.PostTag;
 import com.campus.forum.entity.Role;
 import com.campus.forum.entity.User;
 import com.campus.forum.entity.UserRole;
@@ -35,17 +34,24 @@ import com.campus.forum.mapper.FollowMapper;
 import com.campus.forum.mapper.LikeRecordMapper;
 import com.campus.forum.mapper.NotificationMapper;
 import com.campus.forum.mapper.PostMapper;
-import com.campus.forum.mapper.PostTagMapper;
 import com.campus.forum.mapper.RoleMapper;
+import com.campus.forum.mapper.TestDataMapper;
 import com.campus.forum.mapper.UserMapper;
 import com.campus.forum.mapper.UserRoleMapper;
 import com.campus.forum.mapper.UserSettingMapper;
 import com.campus.forum.service.TestDataService;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionUtils;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -54,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 测试数据管理服务实现类
@@ -122,24 +127,21 @@ public class TestDataServiceImpl implements TestDataService {
             "谢谢你的回复", "周末一起出去玩吗", "这门课你觉得怎么样", "你在哪个社团呀", "晚安啦"
     };
 
-    // ==================== Mapper 注入 ====================
+    // ==================== 依赖注入 ====================
 
-    private final UserMapper userMapper;
-    private final RoleMapper roleMapper;
-    private final UserRoleMapper userRoleMapper;
+    private final TestDataMapper testDataMapper;
+    private final ClubMapper clubMapper;
+    private final ClubMemberMapper clubMemberMapper;
+    private final ClubPostMapper clubPostMapper;
     private final PostMapper postMapper;
     private final CommentMapper commentMapper;
     private final LikeRecordMapper likeRecordMapper;
     private final FavoriteMapper favoriteMapper;
     private final FollowMapper followMapper;
     private final NotificationMapper notificationMapper;
-    private final ClubMapper clubMapper;
-    private final ClubMemberMapper clubMemberMapper;
-    private final ClubPostMapper clubPostMapper;
-    private final PostTagMapper postTagMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final ChatMessageMapper chatMessageMapper;
-    private final UserSettingMapper userSettingMapper;
+    private final SqlSessionFactory sqlSessionFactory;
     private final PasswordEncoder passwordEncoder;
 
     /** 随机数生成器 */
@@ -150,220 +152,150 @@ public class TestDataServiceImpl implements TestDataService {
     /**
      * 一键导入全量测试数据
      * 按顺序生成用户→社团→帖子→评论→点赞→收藏→关注→社团帖子→私信→通知
-     * 若已存在测试数据则抛出业务异常
+     * 若已存在未删除的测试数据则抛出业务异常；逻辑删除残留会先物理清理
      *
      * @return 导入结果（各类数据实际生成数量）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TestDataImportResult importTestData() {
-        // 1. 重复导入检测
-        long existCount = userMapper.selectCount(new LambdaQueryWrapper<User>()
-                .likeRight(User::getUsername, TestDataConstants.USERNAME_PREFIX));
+        SqlSession sqlSession = SqlSessionUtils.getSqlSession(sqlSessionFactory, ExecutorType.BATCH, null);
+        try {
+            ImportSession session = new ImportSession(sqlSession);
+            return doImport(session);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw translateImportConflict(e);
+        } finally {
+            SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+        }
+    }
+
+    /**
+     * 在 BATCH SqlSession 中执行导入（该方法的首次 Mapper 访问绑定 BATCH 执行器）
+     *
+     * @param session 导入会话
+     * @return 导入结果
+     */
+    private TestDataImportResult doImport(ImportSession session) {
+        long existCount = session.testDataMapper.countActiveTestUsers(TestDataConstants.USERNAME_PREFIX);
         if (existCount > 0) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "已存在测试数据，请先移除后再导入");
         }
 
-        // 2. 查询 ROLE_USER 角色
-        Role roleUser = roleMapper.selectOne(new LambdaQueryWrapper<Role>()
+        // 清掉逻辑删除残留，避免唯一索引冲突
+        physicalRemoveTestData(session.testDataMapper);
+        session.flush();
+
+        Role roleUser = session.roleMapper.selectOne(new LambdaQueryWrapper<Role>()
                 .eq(Role::getCode, "ROLE_USER"));
         if (roleUser == null) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "系统未配置 ROLE_USER 角色");
         }
 
-        // 3. 密码只加密一次，所有用户复用
         String encodedPassword = passwordEncoder.encode(TestDataConstants.DEFAULT_PASSWORD);
-
         TestDataImportResult result = new TestDataImportResult();
 
-        // ==================== 用户生成 ====================
-        List<Long> testUserIds = generateUsers(encodedPassword, roleUser.getId());
+        List<Long> testUserIds = generateUsers(session, encodedPassword, roleUser.getId());
         result.setUsers(testUserIds.size());
 
-        // ==================== 社团生成 ====================
-        int clubMemberCount = generateClubs(testUserIds);
-        result.setClubs(TestDataConstants.CLUB_COUNT);
-        result.setClubMembers(clubMemberCount);
+        ClubGenResult clubResult = generateClubs(session, testUserIds);
+        result.setClubs(clubResult.clubIds.size());
+        result.setClubMembers(clubResult.memberCount);
 
-        // ==================== 帖子生成 ====================
-        List<Long> testPostIds = generatePosts(testUserIds);
+        List<Long> testPostIds = generatePosts(session, testUserIds);
         result.setPosts(testPostIds.size());
 
-        // ==================== 评论生成 ====================
-        List<Long> testCommentIds = generateComments(testUserIds, testPostIds);
+        List<Long> testCommentIds = generateComments(session, testUserIds, testPostIds);
         result.setComments(testCommentIds.size());
 
-        // ==================== 点赞生成 ====================
-        int likeCount = generateLikes(testUserIds, testPostIds, testCommentIds);
-        result.setLikes(likeCount);
+        result.setLikes(generateLikes(session, testUserIds, testPostIds, testCommentIds));
+        result.setFavorites(generateFavorites(session, testUserIds, testPostIds));
+        result.setFollows(generateFollows(session, testUserIds));
+        result.setClubPosts(generateClubPosts(session, clubResult.clubIds, testPostIds));
 
-        // ==================== 收藏生成 ====================
-        int favoriteCount = generateFavorites(testUserIds, testPostIds);
-        result.setFavorites(favoriteCount);
-
-        // ==================== 关注生成 ====================
-        int followCount = generateFollows(testUserIds);
-        result.setFollows(followCount);
-
-        // ==================== 社团帖子关联 ====================
-        List<Long> testClubIds = clubMapper.selectList(new LambdaQueryWrapper<Club>()
-                .likeRight(Club::getName, TestDataConstants.CLUB_NAME_PREFIX))
-                .stream().map(Club::getId).collect(Collectors.toList());
-        int clubPostCount = generateClubPosts(testClubIds, testPostIds);
-        result.setClubPosts(clubPostCount);
-
-        // ==================== 私信会话与消息 ====================
-        int[] chatCounts = generateChats(testUserIds);
+        int[] chatCounts = generateChats(session, testUserIds);
         result.setChatSessions(chatCounts[0]);
         result.setChatMessages(chatCounts[1]);
 
-        // ==================== 通知生成 ====================
-        int notificationCount = generateNotifications(testUserIds, testPostIds, testCommentIds);
-        result.setNotifications(notificationCount);
-
+        result.setNotifications(generateNotifications(session, testUserIds, testPostIds, testCommentIds));
+        session.flush();
         return result;
     }
 
     // ==================== removeTestData ====================
 
     /**
-     * 一键移除所有测试数据
-     * 根据 test_ 前缀与【测试】前缀识别并清理全部测试数据
-     * 按依赖顺序删除以保持逻辑清晰
+     * 一键移除所有测试数据（物理删除，含已逻辑删除残留）
      *
      * @return 移除结果（各类数据实际删除数量）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TestDataRemoveResult removeTestData() {
+        return physicalRemoveTestData(testDataMapper);
+    }
+
+    /**
+     * 按依赖顺序物理删除测试数据
+     *
+     * @param mapper 测试数据 Mapper（可来自 BATCH 会话或 Spring 注入）
+     * @return 移除数量统计
+     */
+    private TestDataRemoveResult physicalRemoveTestData(TestDataMapper mapper) {
         TestDataRemoveResult result = new TestDataRemoveResult();
 
-        // 查询测试用户ID
-        List<Long> testUserIds = userMapper.selectList(new LambdaQueryWrapper<User>()
-                .select(User::getId)
-                .likeRight(User::getUsername, TestDataConstants.USERNAME_PREFIX))
-                .stream().map(User::getId).collect(Collectors.toList());
-
-        // 查询测试社团ID
-        List<Long> testClubIds = clubMapper.selectList(new LambdaQueryWrapper<Club>()
-                .select(Club::getId)
-                .likeRight(Club::getName, TestDataConstants.CLUB_NAME_PREFIX))
-                .stream().map(Club::getId).collect(Collectors.toList());
-
-        // 查询测试帖子ID（作者为测试用户且标题以【测试】开头）
+        List<Long> testUserIds = mapper.selectTestUserIds(TestDataConstants.USERNAME_PREFIX);
+        List<Long> testClubIds = mapper.selectTestClubIds(TestDataConstants.CLUB_NAME_PREFIX);
         List<Long> testPostIds = new ArrayList<>();
         if (!testUserIds.isEmpty()) {
-            testPostIds = postMapper.selectList(new LambdaQueryWrapper<Post>()
-                    .select(Post::getId)
-                    .in(Post::getUserId, testUserIds)
-                    .likeRight(Post::getTitle, TestDataConstants.POST_TITLE_PREFIX))
-                    .stream().map(Post::getId).collect(Collectors.toList());
+            testPostIds = mapper.selectTestPostIds(testUserIds, TestDataConstants.POST_TITLE_PREFIX);
         }
 
-        // 如果测试用户和社团都为空，直接返回空结果
         if (testUserIds.isEmpty() && testClubIds.isEmpty()) {
             return result;
         }
 
-        // 1. 删除社团帖子关联
         if (!testClubIds.isEmpty()) {
-            result.setClubPosts(clubPostMapper.delete(new LambdaQueryWrapper<ClubPost>()
-                    .in(ClubPost::getClubId, testClubIds)));
+            result.setClubPosts(mapper.physicalDeleteClubPostsByClubIds(testClubIds));
         }
-
-        // 2. 删除社团成员
-        if (!testClubIds.isEmpty() && !testUserIds.isEmpty()) {
-            result.setClubMembers(clubMemberMapper.delete(new LambdaQueryWrapper<ClubMember>()
-                    .and(w -> w.in(ClubMember::getClubId, testClubIds)
-                            .or().in(ClubMember::getUserId, testUserIds))));
-        } else if (!testClubIds.isEmpty()) {
-            result.setClubMembers(clubMemberMapper.delete(new LambdaQueryWrapper<ClubMember>()
-                    .in(ClubMember::getClubId, testClubIds)));
-        } else if (!testUserIds.isEmpty()) {
-            result.setClubMembers(clubMemberMapper.delete(new LambdaQueryWrapper<ClubMember>()
-                    .in(ClubMember::getUserId, testUserIds)));
-        }
-
-        // 3. 删除社团
-        if (!testClubIds.isEmpty()) {
-            result.setClubs(clubMapper.delete(new LambdaQueryWrapper<Club>()
-                    .in(Club::getId, testClubIds)));
-        }
-
-        // 4. 删除帖子标签关联
         if (!testPostIds.isEmpty()) {
-            postTagMapper.delete(new LambdaQueryWrapper<PostTag>()
-                    .in(PostTag::getPostId, testPostIds));
+            mapper.physicalDeleteClubPostsByPostIds(testPostIds);
         }
 
-        // 5. 删除评论
+        long clubMembers = 0;
+        if (!testClubIds.isEmpty()) {
+            clubMembers += mapper.physicalDeleteClubMembersByClubIds(testClubIds);
+        }
         if (!testUserIds.isEmpty()) {
-            result.setComments(commentMapper.delete(new LambdaQueryWrapper<Comment>()
-                    .in(Comment::getUserId, testUserIds)));
+            clubMembers += mapper.physicalDeleteClubMembersByUserIds(testUserIds);
+        }
+        result.setClubMembers(clubMembers);
+
+        if (!testClubIds.isEmpty()) {
+            result.setClubs(mapper.physicalDeleteClubsByIds(testClubIds));
         }
 
-        // 6. 删除点赞记录
-        if (!testUserIds.isEmpty()) {
-            result.setLikes(likeRecordMapper.delete(new LambdaQueryWrapper<LikeRecord>()
-                    .in(LikeRecord::getUserId, testUserIds)));
+        if (!testPostIds.isEmpty()) {
+            mapper.physicalDeletePostTagsByPostIds(testPostIds);
         }
 
-        // 7. 删除收藏
         if (!testUserIds.isEmpty()) {
-            result.setFavorites(favoriteMapper.delete(new LambdaQueryWrapper<Favorite>()
-                    .in(Favorite::getUserId, testUserIds)));
-        }
-
-        // 8. 删除关注关系
-        if (!testUserIds.isEmpty()) {
-            result.setFollows(followMapper.delete(new LambdaQueryWrapper<Follow>()
-                    .and(w -> w.in(Follow::getFollowerId, testUserIds)
-                            .or().in(Follow::getFollowingId, testUserIds))));
-        }
-
-        // 9. 删除私信消息
-        if (!testUserIds.isEmpty()) {
-            result.setChatMessages(chatMessageMapper.delete(new LambdaQueryWrapper<ChatMessage>()
-                    .and(w -> w.in(ChatMessage::getSenderId, testUserIds)
-                            .or().in(ChatMessage::getReceiverId, testUserIds))));
-        }
-
-        // 10. 删除私信会话
-        if (!testUserIds.isEmpty()) {
-            result.setChatSessions(chatSessionMapper.delete(new LambdaQueryWrapper<ChatSession>()
-                    .and(w -> w.in(ChatSession::getUser1Id, testUserIds)
-                            .or().in(ChatSession::getUser2Id, testUserIds))));
-        }
-
-        // 11. 删除通知
-        if (!testUserIds.isEmpty()) {
-            result.setNotifications(notificationMapper.delete(new LambdaQueryWrapper<Notification>()
-                    .and(w -> w.in(Notification::getUserId, testUserIds)
-                            .or().in(Notification::getFromUserId, testUserIds))));
-        }
-
-        // 12. 删除帖子
-        if (!testUserIds.isEmpty()) {
-            result.setPosts(postMapper.delete(new LambdaQueryWrapper<Post>()
-                    .in(Post::getUserId, testUserIds)));
-        }
-
-        // 13. 删除用户角色关联
-        if (!testUserIds.isEmpty()) {
-            userRoleMapper.delete(new LambdaQueryWrapper<UserRole>()
-                    .in(UserRole::getUserId, testUserIds));
-        }
-
-        // 14. 删除用户设置
-        if (!testUserIds.isEmpty()) {
-            userSettingMapper.delete(new LambdaQueryWrapper<UserSetting>()
-                    .in(UserSetting::getUserId, testUserIds));
-        }
-
-        // 15. 删除用户
-        if (!testUserIds.isEmpty()) {
-            result.setUsers(userMapper.delete(new LambdaQueryWrapper<User>()
-                    .in(User::getId, testUserIds)));
+            result.setComments(mapper.physicalDeleteCommentsByUserIds(testUserIds));
+            result.setLikes(mapper.physicalDeleteLikesByUserIds(testUserIds));
+            result.setFavorites(mapper.physicalDeleteFavoritesByUserIds(testUserIds));
+            result.setFollows(mapper.physicalDeleteFollowsByUserIds(testUserIds));
+            result.setChatMessages(mapper.physicalDeleteChatMessagesByUserIds(testUserIds));
+            result.setChatSessions(mapper.physicalDeleteChatSessionsByUserIds(testUserIds));
+            result.setNotifications(mapper.physicalDeleteNotificationsByUserIds(testUserIds));
+            result.setPosts(mapper.physicalDeletePostsByUserIds(testUserIds));
+            mapper.physicalDeleteUserRolesByUserIds(testUserIds);
+            mapper.physicalDeleteUserSettingsByUserIds(testUserIds);
+            mapper.physicalDeleteSignInRecordsByUserIds(testUserIds);
+            mapper.physicalDeletePointsRecordsByUserIds(testUserIds);
+            mapper.physicalDeleteFileRecordsByUserIds(testUserIds);
+            result.setUsers(mapper.physicalDeleteUsersByIds(testUserIds));
         }
 
         return result;
@@ -372,7 +304,7 @@ public class TestDataServiceImpl implements TestDataService {
     // ==================== status ====================
 
     /**
-     * 查询当前系统中各类测试数据的数量
+     * 查询当前系统中各类测试数据的数量（仅未删除）
      *
      * @return 测试数据状态
      */
@@ -380,32 +312,15 @@ public class TestDataServiceImpl implements TestDataService {
     public TestDataStatus status() {
         TestDataStatus status = new TestDataStatus();
 
-        // 查询测试用户ID
-        List<Long> testUserIds = userMapper.selectList(new LambdaQueryWrapper<User>()
-                .select(User::getId)
-                .likeRight(User::getUsername, TestDataConstants.USERNAME_PREFIX))
-                .stream().map(User::getId).collect(Collectors.toList());
+        List<Long> testUserIds = testDataMapper.selectActiveTestUserIds(TestDataConstants.USERNAME_PREFIX);
+        List<Long> testClubIds = testDataMapper.selectActiveTestClubIds(TestDataConstants.CLUB_NAME_PREFIX);
 
-        // 查询测试社团ID
-        List<Long> testClubIds = clubMapper.selectList(new LambdaQueryWrapper<Club>()
-                .select(Club::getId)
-                .likeRight(Club::getName, TestDataConstants.CLUB_NAME_PREFIX))
-                .stream().map(Club::getId).collect(Collectors.toList());
-
-        // 用户数
         status.setUsers(testUserIds.size());
-
-        // 社团数
         status.setClubs(testClubIds.size());
 
-        // 社团成员数
         if (!testClubIds.isEmpty()) {
             status.setClubMembers(clubMemberMapper.selectCount(new LambdaQueryWrapper<ClubMember>()
                     .in(ClubMember::getClubId, testClubIds)));
-        }
-
-        // 社团帖子关联数
-        if (!testClubIds.isEmpty()) {
             status.setClubPosts(clubPostMapper.selectCount(new LambdaQueryWrapper<ClubPost>()
                     .in(ClubPost::getClubId, testClubIds)));
         }
@@ -414,39 +329,25 @@ public class TestDataServiceImpl implements TestDataService {
             return status;
         }
 
-        // 帖子数
         status.setPosts(postMapper.selectCount(new LambdaQueryWrapper<Post>()
                 .in(Post::getUserId, testUserIds)
                 .likeRight(Post::getTitle, TestDataConstants.POST_TITLE_PREFIX)));
 
-        // 评论数
         status.setComments(commentMapper.selectCount(new LambdaQueryWrapper<Comment>()
                 .in(Comment::getUserId, testUserIds)));
-
-        // 点赞数
         status.setLikes(likeRecordMapper.selectCount(new LambdaQueryWrapper<LikeRecord>()
                 .in(LikeRecord::getUserId, testUserIds)));
-
-        // 收藏数
         status.setFavorites(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
                 .in(Favorite::getUserId, testUserIds)));
-
-        // 关注数
         status.setFollows(followMapper.selectCount(new LambdaQueryWrapper<Follow>()
                 .and(w -> w.in(Follow::getFollowerId, testUserIds)
                         .or().in(Follow::getFollowingId, testUserIds))));
-
-        // 私信消息数
         status.setChatMessages(chatMessageMapper.selectCount(new LambdaQueryWrapper<ChatMessage>()
                 .and(w -> w.in(ChatMessage::getSenderId, testUserIds)
                         .or().in(ChatMessage::getReceiverId, testUserIds))));
-
-        // 私信会话数
         status.setChatSessions(chatSessionMapper.selectCount(new LambdaQueryWrapper<ChatSession>()
                 .and(w -> w.in(ChatSession::getUser1Id, testUserIds)
                         .or().in(ChatSession::getUser2Id, testUserIds))));
-
-        // 通知数
         status.setNotifications(notificationMapper.selectCount(new LambdaQueryWrapper<Notification>()
                 .and(w -> w.in(Notification::getUserId, testUserIds)
                         .or().in(Notification::getFromUserId, testUserIds))));
@@ -459,12 +360,13 @@ public class TestDataServiceImpl implements TestDataService {
     /**
      * 生成测试用户（含 user_role 关联与 user_setting 默认记录）
      *
+     * @param session         导入会话
      * @param encodedPassword BCrypt 加密后的密码（所有用户复用）
      * @param roleUserId      ROLE_USER 角色 ID
      * @return 生成的用户 ID 列表
      */
-    private List<Long> generateUsers(String encodedPassword, Long roleUserId) {
-        List<Long> testUserIds = new ArrayList<>(TestDataConstants.USER_COUNT);
+    private List<Long> generateUsers(ImportSession session, String encodedPassword, Long roleUserId) {
+        List<User> users = new ArrayList<>(TestDataConstants.USER_COUNT);
         for (int i = 1; i <= TestDataConstants.USER_COUNT; i++) {
             String nickname = NICKNAME_POOL[(i - 1) % NICKNAME_POOL.length];
             String username = TestDataConstants.USERNAME_PREFIX + nickname + "_" + String.format("%03d", i);
@@ -480,56 +382,72 @@ public class TestDataServiceImpl implements TestDataService {
             user.setPoints(random.nextInt(501));
             user.setLevel(1 + random.nextInt(10));
             user.setStatus(0);
-            userMapper.insert(user);
-            testUserIds.add(user.getId());
+            session.userMapper.insert(user);
+            users.add(user);
+            session.track();
+        }
+        session.flush();
 
-            // 插入 user_role 关联
+        List<Long> testUserIds = new ArrayList<>(users.size());
+        for (User user : users) {
+            testUserIds.add(user.getId());
             UserRole userRole = new UserRole();
             userRole.setUserId(user.getId());
             userRole.setRoleId(roleUserId);
-            userRoleMapper.insert(userRole);
+            session.userRoleMapper.insert(userRole);
+            session.track();
 
-            // 插入 user_setting 默认记录
             UserSetting setting = new UserSetting();
             setting.setUserId(user.getId());
             setting.setNotifyComment(1);
             setting.setNotifyLike(1);
             setting.setNotifyMessage(1);
-            userSettingMapper.insert(setting);
+            session.userSettingMapper.insert(setting);
+            session.track();
         }
+        session.flush();
         return testUserIds;
     }
 
     /**
      * 生成测试社团（含社团成员记录）
      *
+     * @param session     导入会话
      * @param testUserIds 测试用户 ID 列表
-     * @return 实际生成的社团成员总数（含社长）
+     * @return 社团 ID 与成员总数
      */
-    private int generateClubs(List<Long> testUserIds) {
-        int totalMembers = 0;
+    private ClubGenResult generateClubs(ImportSession session, List<Long> testUserIds) {
+        List<Club> clubs = new ArrayList<>(TestDataConstants.CLUB_COUNT);
         for (int i = 0; i < TestDataConstants.CLUB_COUNT; i++) {
-            Long creatorId = testUserIds.get(i);
-
             Club club = new Club();
             club.setName(TestDataConstants.CLUB_NAME_PREFIX + CLUB_NAME_POOL[i]);
             club.setDescription(CLUB_DESC_POOL[i]);
-            club.setCreatorId(creatorId);
+            club.setCreatorId(testUserIds.get(i));
             club.setStatus(1);
             club.setMemberCount(1);
             club.setPostCount(0);
-            clubMapper.insert(club);
+            session.clubMapper.insert(club);
+            clubs.add(club);
+            session.track();
+        }
+        session.flush();
 
-            // 社长自动加入
+        int totalMembers = 0;
+        List<Long> clubIds = new ArrayList<>(clubs.size());
+        for (int i = 0; i < clubs.size(); i++) {
+            Club club = clubs.get(i);
+            Long creatorId = testUserIds.get(i);
+            clubIds.add(club.getId());
+
             ClubMember president = new ClubMember();
             president.setClubId(club.getId());
             president.setUserId(creatorId);
             president.setRole(1);
             president.setJoinedTime(new Date());
-            clubMemberMapper.insert(president);
+            session.clubMemberMapper.insert(president);
+            session.track();
             totalMembers++;
 
-            // 随机添加 5~15 个普通成员（排除社长）
             int memberCount = 5 + random.nextInt(11);
             Set<Long> addedMemberIds = new HashSet<>();
             addedMemberIds.add(creatorId);
@@ -544,26 +462,29 @@ public class TestDataServiceImpl implements TestDataService {
                 member.setUserId(memberId);
                 member.setRole(0);
                 member.setJoinedTime(new Date());
-                clubMemberMapper.insert(member);
+                session.clubMemberMapper.insert(member);
+                session.track();
                 totalMembers++;
             }
 
-            // 更新社团成员数
-            clubMapper.update(null, new LambdaUpdateWrapper<Club>()
+            session.flush();
+            session.clubMapper.update(null, new LambdaUpdateWrapper<Club>()
                     .eq(Club::getId, club.getId())
                     .set(Club::getMemberCount, addedMemberIds.size()));
         }
-        return totalMembers;
+        session.flush();
+        return new ClubGenResult(clubIds, totalMembers);
     }
 
     /**
      * 生成测试帖子
      *
+     * @param session     导入会话
      * @param testUserIds 测试用户 ID 列表
      * @return 生成的帖子 ID 列表
      */
-    private List<Long> generatePosts(List<Long> testUserIds) {
-        List<Long> testPostIds = new ArrayList<>(TestDataConstants.POST_COUNT);
+    private List<Long> generatePosts(ImportSession session, List<Long> testUserIds) {
+        List<Post> posts = new ArrayList<>(TestDataConstants.POST_COUNT);
         for (int i = 0; i < TestDataConstants.POST_COUNT; i++) {
             String title = TestDataConstants.POST_TITLE_PREFIX
                     + POST_TITLE_POOL[random.nextInt(POST_TITLE_POOL.length)];
@@ -583,64 +504,104 @@ public class TestDataServiceImpl implements TestDataService {
             post.setIsTop(random.nextDouble() < 0.05 ? 1 : 0);
             post.setIsEssence(random.nextDouble() < 0.10 ? 1 : 0);
             post.setStatus(0);
-            postMapper.insert(post);
+            session.postMapper.insert(post);
+            posts.add(post);
+            session.track();
+        }
+        session.flush();
+
+        List<Long> testPostIds = new ArrayList<>(posts.size());
+        for (Post post : posts) {
             testPostIds.add(post.getId());
         }
         return testPostIds;
     }
 
     /**
-     * 生成测试评论（含二级回复），并回填帖子评论数
+     * 生成测试评论（约 70% 顶级、30% 二级回复），并回填帖子评论数
      *
+     * @param session      导入会话
      * @param testUserIds  测试用户 ID 列表
      * @param testPostIds  测试帖子 ID 列表
      * @return 生成的评论 ID 列表
      */
-    private List<Long> generateComments(List<Long> testUserIds, List<Long> testPostIds) {
-        List<Long> testCommentIds = new ArrayList<>(TestDataConstants.COMMENT_COUNT);
-        List<Long> topLevelCommentIds = new ArrayList<>();
+    private List<Long> generateComments(ImportSession session, List<Long> testUserIds, List<Long> testPostIds) {
+        int topCount = (int) Math.round(TestDataConstants.COMMENT_COUNT * 0.7);
+        int replyCount = TestDataConstants.COMMENT_COUNT - topCount;
         Map<Long, Integer> postCommentCount = new HashMap<>();
 
-        for (int i = 0; i < TestDataConstants.COMMENT_COUNT; i++) {
+        List<Comment> topComments = new ArrayList<>(topCount);
+        for (int i = 0; i < topCount; i++) {
             Long postId = testPostIds.get(random.nextInt(testPostIds.size()));
-            Comment comment = new Comment();
-            comment.setPostId(postId);
-            comment.setUserId(testUserIds.get(random.nextInt(testUserIds.size())));
-            comment.setContent(COMMENT_POOL[random.nextInt(COMMENT_POOL.length)]);
-            comment.setLikeCount(0);
-            comment.setStatus(0);
-
-            // 70% 顶级评论，30% 二级回复（若无顶级评论则强制顶级）
-            if (random.nextDouble() < 0.7 || topLevelCommentIds.isEmpty()) {
-                comment.setParentId(0L);
-                commentMapper.insert(comment);
-                topLevelCommentIds.add(comment.getId());
-            } else {
-                comment.setParentId(topLevelCommentIds.get(random.nextInt(topLevelCommentIds.size())));
-                commentMapper.insert(comment);
-            }
-            testCommentIds.add(comment.getId());
+            Comment comment = newComment(testUserIds, postId, 0L);
+            session.commentMapper.insert(comment);
+            topComments.add(comment);
+            session.track();
             postCommentCount.merge(postId, 1, Integer::sum);
         }
+        session.flush();
 
-        // 回填帖子评论数
+        List<Long> topLevelCommentIds = new ArrayList<>(topComments.size());
+        List<Long> testCommentIds = new ArrayList<>(TestDataConstants.COMMENT_COUNT);
+        for (Comment comment : topComments) {
+            topLevelCommentIds.add(comment.getId());
+            testCommentIds.add(comment.getId());
+        }
+
+        List<Comment> replies = new ArrayList<>(replyCount);
+        for (int i = 0; i < replyCount; i++) {
+            Long postId = testPostIds.get(random.nextInt(testPostIds.size()));
+            Long parentId = topLevelCommentIds.get(random.nextInt(topLevelCommentIds.size()));
+            Comment comment = newComment(testUserIds, postId, parentId);
+            session.commentMapper.insert(comment);
+            replies.add(comment);
+            session.track();
+            postCommentCount.merge(postId, 1, Integer::sum);
+        }
+        session.flush();
+        for (Comment comment : replies) {
+            testCommentIds.add(comment.getId());
+        }
+
         for (Map.Entry<Long, Integer> entry : postCommentCount.entrySet()) {
-            postMapper.update(null, new LambdaUpdateWrapper<Post>()
+            session.postMapper.update(null, new LambdaUpdateWrapper<Post>()
                     .eq(Post::getId, entry.getKey())
                     .set(Post::getCommentCount, entry.getValue()));
         }
+        session.flush();
         return testCommentIds;
+    }
+
+    /**
+     * 构造一条评论实体
+     *
+     * @param testUserIds 测试用户 ID
+     * @param postId      帖子 ID
+     * @param parentId    父评论 ID，0 表示顶级
+     * @return 评论实体
+     */
+    private Comment newComment(List<Long> testUserIds, Long postId, Long parentId) {
+        Comment comment = new Comment();
+        comment.setPostId(postId);
+        comment.setUserId(testUserIds.get(random.nextInt(testUserIds.size())));
+        comment.setContent(COMMENT_POOL[random.nextInt(COMMENT_POOL.length)]);
+        comment.setLikeCount(0);
+        comment.setStatus(0);
+        comment.setParentId(parentId);
+        return comment;
     }
 
     /**
      * 生成测试点赞记录（帖子与评论各50%），并回填点赞数
      *
+     * @param session        导入会话
      * @param testUserIds    测试用户 ID 列表
      * @param testPostIds    测试帖子 ID 列表
      * @param testCommentIds 测试评论 ID 列表
      * @return 实际生成的点赞记录数
      */
-    private int generateLikes(List<Long> testUserIds, List<Long> testPostIds, List<Long> testCommentIds) {
+    private int generateLikes(ImportSession session, List<Long> testUserIds, List<Long> testPostIds,
+                             List<Long> testCommentIds) {
         Set<String> dedup = new HashSet<>();
         Map<Long, Integer> postLikeCount = new HashMap<>();
         Map<Long, Integer> commentLikeCount = new HashMap<>();
@@ -662,7 +623,8 @@ public class TestDataServiceImpl implements TestDataService {
             like.setUserId(userId);
             like.setTargetId(targetId);
             like.setTargetType(targetType);
-            likeRecordMapper.insert(like);
+            session.likeRecordMapper.insert(like);
+            session.track();
             count++;
 
             if (targetType == 1) {
@@ -671,30 +633,31 @@ public class TestDataServiceImpl implements TestDataService {
                 commentLikeCount.merge(targetId, 1, Integer::sum);
             }
         }
+        session.flush();
 
-        // 回填帖子点赞数
         for (Map.Entry<Long, Integer> entry : postLikeCount.entrySet()) {
-            postMapper.update(null, new LambdaUpdateWrapper<Post>()
+            session.postMapper.update(null, new LambdaUpdateWrapper<Post>()
                     .eq(Post::getId, entry.getKey())
                     .set(Post::getLikeCount, entry.getValue()));
         }
-        // 回填评论点赞数
         for (Map.Entry<Long, Integer> entry : commentLikeCount.entrySet()) {
-            commentMapper.update(null, new LambdaUpdateWrapper<Comment>()
+            session.commentMapper.update(null, new LambdaUpdateWrapper<Comment>()
                     .eq(Comment::getId, entry.getKey())
                     .set(Comment::getLikeCount, entry.getValue()));
         }
+        session.flush();
         return count;
     }
 
     /**
      * 生成测试收藏记录，并回填帖子收藏数
      *
+     * @param session     导入会话
      * @param testUserIds 测试用户 ID 列表
      * @param testPostIds 测试帖子 ID 列表
      * @return 实际生成的收藏记录数
      */
-    private int generateFavorites(List<Long> testUserIds, List<Long> testPostIds) {
+    private int generateFavorites(ImportSession session, List<Long> testUserIds, List<Long> testPostIds) {
         Set<String> dedup = new HashSet<>();
         Map<Long, Integer> postFavoriteCount = new HashMap<>();
         int count = 0;
@@ -711,28 +674,30 @@ public class TestDataServiceImpl implements TestDataService {
             Favorite favorite = new Favorite();
             favorite.setUserId(userId);
             favorite.setPostId(postId);
-            favoriteMapper.insert(favorite);
+            session.favoriteMapper.insert(favorite);
+            session.track();
             count++;
-
             postFavoriteCount.merge(postId, 1, Integer::sum);
         }
+        session.flush();
 
-        // 回填帖子收藏数
         for (Map.Entry<Long, Integer> entry : postFavoriteCount.entrySet()) {
-            postMapper.update(null, new LambdaUpdateWrapper<Post>()
+            session.postMapper.update(null, new LambdaUpdateWrapper<Post>()
                     .eq(Post::getId, entry.getKey())
                     .set(Post::getFavoriteCount, entry.getValue()));
         }
+        session.flush();
         return count;
     }
 
     /**
      * 生成测试关注关系
      *
+     * @param session     导入会话
      * @param testUserIds 测试用户 ID 列表
      * @return 实际生成的关注关系数
      */
-    private int generateFollows(List<Long> testUserIds) {
+    private int generateFollows(ImportSession session, List<Long> testUserIds) {
         Set<String> dedup = new HashSet<>();
         int count = 0;
 
@@ -751,20 +716,23 @@ public class TestDataServiceImpl implements TestDataService {
             Follow follow = new Follow();
             follow.setFollowerId(followerId);
             follow.setFollowingId(followingId);
-            followMapper.insert(follow);
+            session.followMapper.insert(follow);
+            session.track();
             count++;
         }
+        session.flush();
         return count;
     }
 
     /**
      * 生成测试社团帖子关联
      *
+     * @param session     导入会话
      * @param testClubIds 测试社团 ID 列表
      * @param testPostIds 测试帖子 ID 列表
      * @return 实际生成的社团帖子关联数
      */
-    private int generateClubPosts(List<Long> testClubIds, List<Long> testPostIds) {
+    private int generateClubPosts(ImportSession session, List<Long> testClubIds, List<Long> testPostIds) {
         Set<String> dedup = new HashSet<>();
         int count = 0;
 
@@ -780,24 +748,26 @@ public class TestDataServiceImpl implements TestDataService {
             ClubPost clubPost = new ClubPost();
             clubPost.setClubId(clubId);
             clubPost.setPostId(postId);
-            clubPostMapper.insert(clubPost);
+            session.clubPostMapper.insert(clubPost);
+            session.track();
             count++;
         }
+        session.flush();
         return count;
     }
 
     /**
      * 生成测试私信会话与消息
      *
+     * @param session     导入会话
      * @param testUserIds 测试用户 ID 列表
      * @return int数组，[0]=会话数，[1]=消息数
      */
-    private int[] generateChats(List<Long> testUserIds) {
+    private int[] generateChats(ImportSession session, List<Long> testUserIds) {
         Set<String> sessionKeys = new HashSet<>();
-        int sessionCount = 0;
-        int messageCount = 0;
+        List<ChatSession> sessions = new ArrayList<>(TestDataConstants.CHAT_SESSION_COUNT);
 
-        while (sessionCount < TestDataConstants.CHAT_SESSION_COUNT) {
+        while (sessions.size() < TestDataConstants.CHAT_SESSION_COUNT) {
             Long u1 = testUserIds.get(random.nextInt(testUserIds.size()));
             Long u2 = testUserIds.get(random.nextInt(testUserIds.size()));
             if (u1.equals(u2)) {
@@ -811,52 +781,58 @@ public class TestDataServiceImpl implements TestDataService {
             }
             sessionKeys.add(key);
 
-            ChatSession session = new ChatSession();
-            session.setUser1Id(minId);
-            session.setUser2Id(maxId);
-            chatSessionMapper.insert(session);
-            sessionCount++;
+            ChatSession chatSession = new ChatSession();
+            chatSession.setUser1Id(minId);
+            chatSession.setUser2Id(maxId);
+            session.chatSessionMapper.insert(chatSession);
+            sessions.add(chatSession);
+            session.track();
+        }
+        session.flush();
 
-            // 每个会话随机 1~10 条消息
+        int messageCount = 0;
+        for (ChatSession chatSession : sessions) {
             int msgCount = 1 + random.nextInt(10);
-            Long lastMessageId = null;
+            List<ChatMessage> messages = new ArrayList<>(msgCount);
             for (int j = 0; j < msgCount; j++) {
                 ChatMessage msg = new ChatMessage();
-                msg.setSessionId(session.getId());
+                msg.setSessionId(chatSession.getId());
                 if (random.nextBoolean()) {
-                    msg.setSenderId(minId);
-                    msg.setReceiverId(maxId);
+                    msg.setSenderId(chatSession.getUser1Id());
+                    msg.setReceiverId(chatSession.getUser2Id());
                 } else {
-                    msg.setSenderId(maxId);
-                    msg.setReceiverId(minId);
+                    msg.setSenderId(chatSession.getUser2Id());
+                    msg.setReceiverId(chatSession.getUser1Id());
                 }
                 msg.setContent(CHAT_MESSAGE_POOL[random.nextInt(CHAT_MESSAGE_POOL.length)]);
                 msg.setIsRead(random.nextInt(2));
-                chatMessageMapper.insert(msg);
-                lastMessageId = msg.getId();
+                session.chatMessageMapper.insert(msg);
+                messages.add(msg);
+                session.track();
                 messageCount++;
             }
-
-            // 更新会话的最后消息ID与时间
-            if (lastMessageId != null) {
-                chatSessionMapper.update(null, new LambdaUpdateWrapper<ChatSession>()
-                        .eq(ChatSession::getId, session.getId())
-                        .set(ChatSession::getLastMessageId, lastMessageId)
-                        .set(ChatSession::getLastMessageTime, new Date()));
-            }
+            session.flush();
+            ChatMessage last = messages.get(messages.size() - 1);
+            session.chatSessionMapper.update(null, new LambdaUpdateWrapper<ChatSession>()
+                    .eq(ChatSession::getId, chatSession.getId())
+                    .set(ChatSession::getLastMessageId, last.getId())
+                    .set(ChatSession::getLastMessageTime, new Date()));
         }
-        return new int[]{sessionCount, messageCount};
+        session.flush();
+        return new int[]{sessions.size(), messageCount};
     }
 
     /**
      * 生成测试通知
      *
+     * @param session        导入会话
      * @param testUserIds    测试用户 ID 列表
      * @param testPostIds    测试帖子 ID 列表
      * @param testCommentIds 测试评论 ID 列表
      * @return 实际生成的通知数
      */
-    private int generateNotifications(List<Long> testUserIds, List<Long> testPostIds, List<Long> testCommentIds) {
+    private int generateNotifications(ImportSession session, List<Long> testUserIds, List<Long> testPostIds,
+                                     List<Long> testCommentIds) {
         int count = 0;
         for (int i = 0; i < TestDataConstants.NOTIFICATION_COUNT; i++) {
             int type = 1 + random.nextInt(4);
@@ -873,12 +849,12 @@ public class TestDataServiceImpl implements TestDataService {
             notif.setIsRead(random.nextInt(2));
 
             switch (type) {
-                case 1: // 评论通知
+                case 1:
                     notif.setContent("评论了你的帖子");
                     notif.setTargetId(testPostIds.get(random.nextInt(testPostIds.size())));
                     notif.setTargetType(1);
                     break;
-                case 2: // 点赞通知
+                case 2:
                     if (random.nextBoolean()) {
                         notif.setContent("赞了你的帖子");
                         notif.setTargetId(testPostIds.get(random.nextInt(testPostIds.size())));
@@ -889,20 +865,24 @@ public class TestDataServiceImpl implements TestDataService {
                         notif.setTargetType(2);
                     }
                     break;
-                case 3: // 关注通知
+                case 3:
                     notif.setContent("关注了你");
                     notif.setTargetId(fromUserId);
                     notif.setTargetType(3);
                     break;
-                case 4: // 系统通知
+                case 4:
                     notif.setContent("系统通知：欢迎使用校园论坛");
                     notif.setTargetId(null);
                     notif.setTargetType(null);
                     break;
+                default:
+                    break;
             }
-            notificationMapper.insert(notif);
+            session.notificationMapper.insert(notif);
+            session.track();
             count++;
         }
+        session.flush();
         return count;
     }
 
@@ -943,6 +923,107 @@ public class TestDataServiceImpl implements TestDataService {
                 .replaceAll("\\s+", " ")
                 .trim();
         return plain.length() > 100 ? plain.substring(0, 100) : plain;
+    }
+
+    /**
+     * 将唯一键冲突转为业务异常，其它运行时异常原样抛出
+     *
+     * @param e 导入过程中的运行时异常
+     * @return 转换后的异常
+     */
+    private RuntimeException translateImportConflict(RuntimeException e) {
+        if (containsDuplicate(e)) {
+            return new BusinessException(ResultCode.BUSINESS_ERROR, "测试数据与已有记录冲突，请先移除后再导入");
+        }
+        return e;
+    }
+
+    /**
+     * 判断异常链是否为唯一键冲突
+     *
+     * @param throwable 异常
+     * @return 是否唯一键冲突
+     */
+    private boolean containsDuplicate(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof DataIntegrityViolationException
+                    || current instanceof DuplicateKeyException
+                    || current instanceof SQLIntegrityConstraintViolationException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("Duplicate entry")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * 社团生成结果
+     *
+     * @param clubIds     社团 ID 列表
+     * @param memberCount 成员总数（含社长）
+     */
+    private record ClubGenResult(List<Long> clubIds, int memberCount) {
+    }
+
+    /**
+     * 导入用 BATCH 会话：统一 flush，且不单独 commit
+     */
+    private static final class ImportSession {
+        private final SqlSession sqlSession;
+        private final TestDataMapper testDataMapper;
+        private final RoleMapper roleMapper;
+        private final UserMapper userMapper;
+        private final UserRoleMapper userRoleMapper;
+        private final UserSettingMapper userSettingMapper;
+        private final ClubMapper clubMapper;
+        private final ClubMemberMapper clubMemberMapper;
+        private final ClubPostMapper clubPostMapper;
+        private final PostMapper postMapper;
+        private final CommentMapper commentMapper;
+        private final LikeRecordMapper likeRecordMapper;
+        private final FavoriteMapper favoriteMapper;
+        private final FollowMapper followMapper;
+        private final ChatSessionMapper chatSessionMapper;
+        private final ChatMessageMapper chatMessageMapper;
+        private final NotificationMapper notificationMapper;
+        private int pending;
+
+        private ImportSession(SqlSession sqlSession) {
+            this.sqlSession = sqlSession;
+            this.testDataMapper = sqlSession.getMapper(TestDataMapper.class);
+            this.roleMapper = sqlSession.getMapper(RoleMapper.class);
+            this.userMapper = sqlSession.getMapper(UserMapper.class);
+            this.userRoleMapper = sqlSession.getMapper(UserRoleMapper.class);
+            this.userSettingMapper = sqlSession.getMapper(UserSettingMapper.class);
+            this.clubMapper = sqlSession.getMapper(ClubMapper.class);
+            this.clubMemberMapper = sqlSession.getMapper(ClubMemberMapper.class);
+            this.clubPostMapper = sqlSession.getMapper(ClubPostMapper.class);
+            this.postMapper = sqlSession.getMapper(PostMapper.class);
+            this.commentMapper = sqlSession.getMapper(CommentMapper.class);
+            this.likeRecordMapper = sqlSession.getMapper(LikeRecordMapper.class);
+            this.favoriteMapper = sqlSession.getMapper(FavoriteMapper.class);
+            this.followMapper = sqlSession.getMapper(FollowMapper.class);
+            this.chatSessionMapper = sqlSession.getMapper(ChatSessionMapper.class);
+            this.chatMessageMapper = sqlSession.getMapper(ChatMessageMapper.class);
+            this.notificationMapper = sqlSession.getMapper(NotificationMapper.class);
+        }
+
+        private void track() {
+            pending++;
+            if (pending >= TestDataConstants.BATCH_FLUSH_SIZE) {
+                flush();
+            }
+        }
+
+        private void flush() {
+            sqlSession.flushStatements();
+            pending = 0;
+        }
     }
 
 }
