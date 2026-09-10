@@ -14,7 +14,9 @@ import com.campus.forum.entity.Tag;
 import com.campus.forum.mapper.PostMapper;
 import com.campus.forum.mapper.PostTagMapper;
 import com.campus.forum.mapper.TagMapper;
+import com.campus.forum.security.SecurityUtils;
 import com.campus.forum.service.TagService;
+import com.campus.forum.utils.PostAnonymityHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -90,6 +92,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
         // 批量填充标签
         fillTags(result.getRecords());
+        PostAnonymityHelper.applyPublicView(result.getRecords(), SecurityUtils.getCurrentUserIdOrNull());
         return PageResult.of(result);
     }
 

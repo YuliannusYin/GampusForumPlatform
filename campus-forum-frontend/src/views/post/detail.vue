@@ -18,11 +18,21 @@
 
         <!-- 作者信息 -->
         <div class="author-info">
-          <el-avatar :size="44" :src="post.userAvatar" class="author-avatar" @click="goAuthorProfile">
-            {{ initialOf(post.username) }}
+          <el-avatar
+            :size="44"
+            :src="isAnonymous ? '' : post.userAvatar"
+            class="author-avatar"
+            :class="{ ghost: isAnonymous, clickable: !isAnonymous }"
+            @click="goAuthorProfile"
+          >
+            {{ isAnonymous ? '匿' : initialOf(post.username) }}
           </el-avatar>
           <div class="author-meta">
-            <span class="author-name" @click="goAuthorProfile">{{ post.username }}</span>
+            <span
+              class="author-name"
+              :class="{ anonymous: isAnonymous }"
+              @click="goAuthorProfile"
+            >{{ authorDisplayName }}</span>
             <span class="post-time">
               <el-icon><Clock /></el-icon>
               {{ formatTime(post.createTime) }}
@@ -102,6 +112,9 @@
           <el-icon><Delete /></el-icon>
           删除
         </el-button>
+        <el-button v-if="isAnonymous && !isAuthor" class="action-chip" round @click="reportVisible = true">
+          举报
+        </el-button>
       </div>
 
       <!-- 评论区 -->
@@ -113,7 +126,7 @@
             <span class="comment-count">{{ post.commentCount || 0 }}</span>
           </div>
         </template>
-        <CommentList :post-id="postId" />
+        <CommentList :post-id="postId" :allow-report="isAnonymous" />
       </el-card>
     </template>
 
@@ -121,6 +134,8 @@
     <el-empty v-else-if="!loading" description="帖子不存在或已删除">
       <el-button type="primary" @click="router.push('/home')">返回首页</el-button>
     </el-empty>
+
+    <ReportDialog v-model="reportVisible" :target-type="1" :target-id="postId" />
   </div>
 </template>
 
@@ -134,6 +149,7 @@ import { formatTime } from '@/utils/format'
 import { getPostDetail, deletePost } from '@/api/post'
 import { likePost, favoritePost, getInteractions } from '@/api/interaction'
 import CommentList from '@/components/CommentList.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,10 +169,16 @@ const favorited = ref(false)
 const likeLoading = ref(false)
 const favLoading = ref(false)
 const deleteLoading = ref(false)
+const reportVisible = ref(false)
 
-// 是否为当前用户自己的帖子（作者可见编辑/删除）
-const isAuthor = computed(() => {
-  return userStore.isLoggedIn && post.value && userStore.userInfo?.id === post.value.userId
+// 是否为当前用户自己的帖子（匿名帖由接口下发 isAuthor，不再比较 userId）
+const isAnonymous = computed(() => Number(post.value?.isAnonymous) === 1)
+const isAuthor = computed(() => !!post.value?.isAuthor)
+const authorDisplayName = computed(() => {
+  if (isAnonymous.value) {
+    return isAuthor.value ? '匿名（我）' : '匿名墙友'
+  }
+  return post.value?.username || '用户'
 })
 
 // 用户名首字母（头像占位）
@@ -237,6 +259,7 @@ const goEdit = () => {
 
 // 跳转作者用户主页
 const goAuthorProfile = () => {
+  if (isAnonymous.value) return
   if (post.value && post.value.userId) {
     router.push(`/user/${post.value.userId}`)
   }
@@ -330,11 +353,19 @@ onMounted(() => {
 }
 
 .author-avatar {
-  cursor: pointer;
   flex-shrink: 0;
   background: var(--gradient-primary);
   color: #fff;
   font-weight: var(--font-weight-semibold);
+}
+
+.author-avatar.clickable {
+  cursor: pointer;
+}
+
+.author-avatar.ghost {
+  cursor: default;
+  background: #c4b6a6;
 }
 
 .author-meta {
@@ -355,6 +386,14 @@ onMounted(() => {
 
 .author-name:hover {
   color: var(--color-primary);
+}
+
+.author-name.anonymous {
+  cursor: default;
+}
+
+.author-name.anonymous:hover {
+  color: var(--color-text-1);
 }
 
 .post-time {

@@ -290,7 +290,7 @@ npm run build
 
 ## 数据库设计概览
 
-共 16 张表，均使用 InnoDB 引擎、utf8mb4 字符集、BIGINT 自增主键，支持逻辑删除（`deleted` 字段）。
+共 22 张表，均使用 InnoDB 引擎、utf8mb4 字符集、BIGINT 自增主键，支持逻辑删除（`deleted` 字段）。
 
 | # | 表名 | 说明 |
 | --- | --- | --- |
@@ -310,6 +310,12 @@ npm run build
 | 14 | sign_in_record | 签到记录表 |
 | 15 | points_record | 积分记录表 |
 | 16 | file_record | 文件上传记录表 |
+| 17 | follow | 关注关系表 |
+| 18 | club | 社团表 |
+| 19 | club_member | 社团成员表 |
+| 20 | club_post | 社团帖子关联表 |
+| 21 | user_setting | 用户通知偏好 |
+| 22 | report | 表白墙举报表 |
 
 完整建表脚本见 `docker/init/init.sql`。
 

@@ -58,6 +58,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="username" label="作者" width="120" show-overflow-tooltip />
+        <el-table-column label="匿名" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.isAnonymous" type="danger" size="small" class="status-chip">是</el-tag>
+            <span v-else class="text-muted">否</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="sectionName" label="板块" width="120" show-overflow-tooltip />
         <el-table-column prop="viewCount" label="浏览" width="80" align="center" />
         <el-table-column prop="likeCount" label="点赞" width="80" align="center" />

@@ -12,35 +12,44 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 板块实体类
- * 对应数据库 section 表，存储论坛板块信息
+ * 举报实体
+ * 对应 report 表，记录对表白墙帖子/评论的举报与处理结果
  *
  * @author campus
  */
 @Data
-@TableName("section")
-public class Section implements Serializable {
+@TableName("report")
+public class Report implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 板块ID */
+    /** 主键ID */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 板块名 */
-    private String name;
+    /** 举报人ID */
+    private Long reporterId;
 
-    /** 板块编码（confession=表白墙） */
-    private String code;
+    /** 目标类型 1帖子 2评论 */
+    private Integer targetType;
 
-    /** 描述 */
+    /** 目标ID */
+    private Long targetId;
+
+    /** 原因 1垃圾广告 2辱骂骚扰 3色情低俗 4人身攻击 5其他 */
+    private Integer reason;
+
+    /** 补充说明 */
     private String description;
 
-    /** 图标URL */
-    private String icon;
+    /** 状态 0待处理 1属实已处理 2驳回 */
+    private Integer status;
 
-    /** 排序（升序） */
-    private Integer sort;
+    /** 处理人ID */
+    private Long handlerId;
+
+    /** 处理备注 */
+    private String handleRemark;
 
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)

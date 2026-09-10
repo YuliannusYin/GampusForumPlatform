@@ -25,6 +25,10 @@ public class SectionVO implements Serializable {
     @Schema(description = "板块名", example = "校园生活")
     private String name;
 
+    /** 板块编码（confession=表白墙） */
+    @Schema(description = "板块编码", example = "confession")
+    private String code;
+
     /** 描述 */
     @Schema(description = "描述", example = "分享校园日常、活动资讯、生活经验")
     private String description;

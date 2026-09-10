@@ -79,6 +79,14 @@ public class PostListVO implements Serializable {
     @Schema(description = "是否精华 0否 1是", example = "0")
     private Integer isEssence;
 
+    /** 是否匿名 0否 1是 */
+    @Schema(description = "是否匿名 0否 1是", example = "0")
+    private Integer isAnonymous;
+
+    /** 当前登录用户是否为作者（匿名帖不返回 userId，用此字段判断编辑/删除） */
+    @Schema(description = "当前用户是否为作者", example = "false")
+    private Boolean isAuthor;
+
     /** 创建时间 */
     @Schema(description = "创建时间", example = "2024-01-01 12:00:00")
     private Date createTime;

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.forum.mapper.ReportMapper">
+
+    <select id="selectAdminReportList" resultType="com.campus.forum.dto.resp.ReportVO">
+        SELECT
+            r.id                      AS id,
+            r.reporter_id             AS reporterId,
+            reporter.username         AS reporterUsername,
+            r.target_type             AS targetType,
+            r.target_id               AS targetId,
+            CASE
+                WHEN r.target_type = 1 THEN p.title
+                WHEN r.target_type = 2 THEN LEFT(c.content, 80)
+                ELSE NULL
+            END                       AS targetTitle,
+            CASE
+                WHEN r.target_type = 1 THEN pu.username
+                WHEN r.target_type = 2 THEN cu.username
+                ELSE NULL
+            END                       AS targetAuthorUsername,
+            r.reason                  AS reason,
+            r.description             AS description,
+            r.status                  AS status,
+            r.handler_id              AS handlerId,
+            handler.username          AS handlerUsername,
+            r.handle_remark           AS handleRemark,
+            r.create_time             AS createTime,
+            r.update_time             AS updateTime
+        FROM report r
+        LEFT JOIN user reporter ON r.reporter_id = reporter.id
+        LEFT JOIN user handler  ON r.handler_id = handler.id
+        LEFT JOIN post p        ON r.target_type = 1 AND r.target_id = p.id
+        LEFT JOIN user pu       ON p.user_id = pu.id
+        LEFT JOIN comment c     ON r.target_type = 2 AND r.target_id = c.id
+        LEFT JOIN user cu       ON c.user_id = cu.id
+        WHERE r.deleted = 0
+        <if test="status != null">
+            AND r.status = #{status}
+        </if>
+        <if test="targetType != null">
+            AND r.target_type = #{targetType}
+        </if>
+        ORDER BY r.status ASC, r.create_time DESC
+    </select>
+
+</mapper>

@@ -37,6 +37,10 @@
             <el-icon><Document /></el-icon>
             <span class="nav-text">帖子管理</span>
           </router-link>
+          <router-link to="/admin/reports" class="nav-item" :class="{ active: activeMenu === '/admin/reports' }">
+            <el-icon><WarningFilled /></el-icon>
+            <span class="nav-text">举报处理</span>
+          </router-link>
           <router-link to="/admin/sections" class="nav-item" :class="{ active: activeMenu === '/admin/sections' }">
             <el-icon><Files /></el-icon>
             <span class="nav-text">板块管理</span>
@@ -101,7 +105,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { MagicStick } from '@element-plus/icons-vue'
+import { MagicStick, WarningFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()

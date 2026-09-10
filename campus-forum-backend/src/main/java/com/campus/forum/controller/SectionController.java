@@ -9,6 +9,7 @@ import com.campus.forum.entity.Post;
 import com.campus.forum.entity.Section;
 import com.campus.forum.mapper.PostMapper;
 import com.campus.forum.service.SectionService;
+import com.campus.forum.utils.PostAnonymityHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -109,6 +110,10 @@ public class SectionController {
             throw new BusinessException(ResultCode.NOT_FOUND, "板块不存在");
         }
         section.setId(id);
+        // 表白墙编码不可被普通编辑覆盖，避免匿名能力失效
+        if (PostAnonymityHelper.CONFESSION_SECTION_CODE.equals(exist.getCode())) {
+            section.setCode(exist.getCode());
+        }
         sectionService.updateById(section);
         return Result.success(toVO(sectionService.getById(id)));
     }

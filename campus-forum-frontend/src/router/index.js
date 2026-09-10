@@ -25,6 +25,7 @@ const routes = [
     children: [
       { path: '', redirect: '/home' },
       { path: 'home', name: 'Home', component: () => import('@/views/home/index.vue'), meta: { title: '首页' } },
+      { path: 'wall', name: 'Wall', component: () => import('@/views/wall/index.vue'), meta: { title: '表白墙' } },
       { path: 'section/:id', name: 'Section', component: () => import('@/views/section/index.vue'), meta: { title: '板块' } },
       { path: 'post/:id', name: 'PostDetail', component: () => import('@/views/post/detail.vue'), meta: { title: '帖子详情' } },
       { path: 'post/create', name: 'PostCreate', component: () => import('@/views/post/edit.vue'), meta: { title: '发帖', requiresAuth: true } },
@@ -54,6 +55,7 @@ const routes = [
       { path: 'sections', name: 'AdminSections', component: () => import('@/views/admin/sections.vue'), meta: { title: '板块管理', requiresAdmin: true } },
       { path: 'tags', name: 'AdminTags', component: () => import('@/views/admin/tags.vue'), meta: { title: '标签管理', requiresAdmin: true } },
       { path: 'clubs', name: 'AdminClubs', component: () => import('@/views/admin/clubs.vue'), meta: { title: '社团审核', requiresAdmin: true } },
+      { path: 'reports', name: 'AdminReports', component: () => import('@/views/admin/reports.vue'), meta: { title: '举报处理', requiresAdmin: true } },
       { path: 'test-data', name: 'AdminTestData', component: () => import('@/views/admin/test-data.vue'), meta: { title: '测试数据', requiresAdmin: true, requiresSuperAdmin: true } }
     ]
   },

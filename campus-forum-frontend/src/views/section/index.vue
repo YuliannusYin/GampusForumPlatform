@@ -28,11 +28,12 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PostList from '@/components/PostList.vue'
 import { getSections } from '@/api/post'
 
 const route = useRoute()
+const router = useRouter()
 
 // 从路由参数获取板块 ID
 const sectionId = computed(() => route.params.id)
@@ -48,6 +49,10 @@ const fetchSectionInfo = async () => {
   try {
     const list = await getSections()
     const found = (list || []).find((item) => String(item.id) === String(sectionId.value))
+    if (found?.code === 'confession') {
+      router.replace('/wall')
+      return
+    }
     sectionInfo.value = found || null
   } catch (err) {
     // 错误已由 request.js 拦截器统一提示

@@ -22,7 +22,11 @@
       <!-- Footer -->
       <div class="post-footer">
         <div class="footer-left">
-          <span v-if="post.username" class="post-author" @click.stop="goAuthorProfile">
+          <span v-if="isAnonymous" class="post-author anonymous" @click.stop>
+            <el-avatar :size="22" class="author-avatar ghost">匿</el-avatar>
+            {{ anonymousLabel }}
+          </span>
+          <span v-else-if="post.username" class="post-author" @click.stop="goAuthorProfile">
             <el-avatar :size="22" class="author-avatar">{{ authorInitial }}</el-avatar>
             {{ post.username }}
           </span>
@@ -83,12 +87,16 @@ const authorInitial = computed(() => {
   return name ? name.charAt(0).toUpperCase() : ''
 })
 
+const isAnonymous = computed(() => Number(props.post.isAnonymous) === 1)
+const anonymousLabel = computed(() => (props.post.isAuthor ? '匿名（我）' : '匿名墙友'))
+
 const goDetail = () => {
   if (!props.post.id) return
   router.push(`/post/${props.post.id}`)
 }
 
 const goAuthorProfile = () => {
+  if (isAnonymous.value) return
   if (props.post.userId) router.push(`/user/${props.post.userId}`)
 }
 </script>
@@ -221,11 +229,24 @@ const goAuthorProfile = () => {
   color: var(--color-primary);
 }
 
+.post-author.anonymous {
+  cursor: default;
+  color: var(--color-text-3);
+}
+
+.post-author.anonymous:hover {
+  color: var(--color-text-3);
+}
+
 .author-avatar {
   background: var(--gradient-primary);
   color: #fff;
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
+}
+
+.author-avatar.ghost {
+  background: #c4b6a6;
 }
 
 .post-time {

@@ -27,6 +27,8 @@ import com.campus.forum.mapper.SectionMapper;
 import com.campus.forum.mapper.UserMapper;
 import com.campus.forum.service.ClubService;
 import com.campus.forum.service.PostService;
+import com.campus.forum.security.SecurityUtils;
+import com.campus.forum.utils.PostAnonymityHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -540,9 +542,11 @@ public class ClubServiceImpl extends ServiceImpl<ClubMapper, Club> implements Cl
             vo.setFavoriteCount(post.getFavoriteCount());
             vo.setIsTop(post.getIsTop());
             vo.setIsEssence(post.getIsEssence());
+            vo.setIsAnonymous(post.getIsAnonymous());
             vo.setCreateTime(post.getCreateTime());
             voList.add(vo);
         }
+        PostAnonymityHelper.applyPublicView(voList, SecurityUtils.getCurrentUserIdOrNull());
         return voList;
     }
 

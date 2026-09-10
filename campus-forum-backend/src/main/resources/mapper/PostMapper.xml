@@ -32,6 +32,7 @@
             p.favorite_count  AS favoriteCount,
             p.is_top          AS isTop,
             p.is_essence      AS isEssence,
+            p.is_anonymous    AS isAnonymous,
             p.create_time     AS createTime
         FROM post p
         LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
@@ -78,6 +79,7 @@
             p.favorite_count  AS favoriteCount,
             p.is_top          AS isTop,
             p.is_essence      AS isEssence,
+            p.is_anonymous    AS isAnonymous,
             p.create_time     AS createTime
         FROM post p
         LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0
@@ -86,7 +88,7 @@
           AND p.status = 0
           AND (p.title LIKE CONCAT('%', #{keyword}, '%')
                OR p.content LIKE CONCAT('%', #{keyword}, '%')
-               OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+               OR (IFNULL(p.is_anonymous, 0) = 0 AND u.username LIKE CONCAT('%', #{keyword}, '%')))
         <if test="sectionId != null">
             AND p.section_id = #{sectionId}
         </if>
@@ -121,6 +123,7 @@
             p.favorite_count  AS favoriteCount,
             p.is_top          AS isTop,
             p.is_essence      AS isEssence,
+            p.is_anonymous    AS isAnonymous,
             p.create_time     AS createTime,
             p.update_time     AS updateTime
         FROM post p
@@ -154,6 +157,7 @@
             p.favorite_count  AS favoriteCount,
             p.is_top          AS isTop,
             p.is_essence      AS isEssence,
+            p.is_anonymous    AS isAnonymous,
             p.create_time     AS createTime
         FROM post p
         LEFT JOIN user u    ON p.user_id = u.id    AND u.deleted = 0

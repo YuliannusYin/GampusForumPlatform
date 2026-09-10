@@ -80,13 +80,15 @@ DROP TABLE IF EXISTS `section`;
 CREATE TABLE `section` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '板块ID',
     `name`        VARCHAR(50)  NOT NULL COMMENT '板块名',
+    `code`        VARCHAR(50)  DEFAULT NULL COMMENT '板块编码 confession=表白墙',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '描述',
     `icon`        VARCHAR(255) DEFAULT NULL COMMENT '图标URL',
     `sort`        INT          NOT NULL DEFAULT 0 COMMENT '排序（升序）',
     `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='板块表';
 
 -- ======================================================================
@@ -106,6 +108,7 @@ CREATE TABLE `post` (
     `favorite_count` INT          NOT NULL DEFAULT 0 COMMENT '收藏数',
     `is_top`         TINYINT      NOT NULL DEFAULT 0 COMMENT '是否置顶 0否 1是',
     `is_essence`     TINYINT      NOT NULL DEFAULT 0 COMMENT '是否精华 0否 1是',
+    `is_anonymous`   TINYINT      NOT NULL DEFAULT 0 COMMENT '是否匿名 0否 1是',
     `status`         TINYINT      NOT NULL DEFAULT 0 COMMENT '状态 0已发布 1草稿 2已删除',
     `create_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -392,6 +395,29 @@ CREATE TABLE `user_setting` (
     UNIQUE KEY `uk_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户设置表';
 
+-- ======================================================================
+-- 22. 举报表
+-- ======================================================================
+DROP TABLE IF EXISTS `report`;
+CREATE TABLE `report` (
+    `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `reporter_id`    BIGINT       NOT NULL COMMENT '举报人ID',
+    `target_type`    TINYINT      NOT NULL COMMENT '目标类型 1帖子 2评论',
+    `target_id`      BIGINT       NOT NULL COMMENT '目标ID',
+    `reason`         TINYINT      NOT NULL COMMENT '原因 1垃圾广告 2辱骂骚扰 3色情低俗 4人身攻击 5其他',
+    `description`    VARCHAR(500) DEFAULT NULL COMMENT '补充说明',
+    `status`         TINYINT      NOT NULL DEFAULT 0 COMMENT '状态 0待处理 1属实已处理 2驳回',
+    `handler_id`     BIGINT       DEFAULT NULL COMMENT '处理人ID',
+    `handle_remark`  VARCHAR(255) DEFAULT NULL COMMENT '处理备注',
+    `create_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_target` (`target_type`, `target_id`),
+    KEY `idx_reporter_id` (`reporter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='举报表';
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ======================================================================
@@ -423,12 +449,12 @@ INSERT INTO `user_role` (`user_id`, `role_id`) VALUES
     (2, 3);
 
 -- ---------- 默认板块 ----------
-INSERT INTO `section` (`id`, `name`, `description`, `icon`, `sort`) VALUES
-    (1, '校园生活', '分享校园日常、活动资讯、生活经验', NULL, 1),
-    (2, '学习交流', '课程讨论、学习资料、考试经验分享', NULL, 2),
-    (3, '二手交易', '书籍、数码、生活用品等闲置物品交易', NULL, 3),
-    (4, '失物招领', '丢失物品寻回、捡到物品归还信息发布', NULL, 4),
-    (5, '表白墙',   '匿名表白、心情倾诉、校园情感交流',   NULL, 5);
+INSERT INTO `section` (`id`, `name`, `code`, `description`, `icon`, `sort`) VALUES
+    (1, '校园生活', NULL,         '分享校园日常、活动资讯、生活经验', NULL, 1),
+    (2, '学习交流', NULL,         '课程讨论、学习资料、考试经验分享', NULL, 2),
+    (3, '二手交易', NULL,         '书籍、数码、生活用品等闲置物品交易', NULL, 3),
+    (4, '失物招领', NULL,         '丢失物品寻回、捡到物品归还信息发布', NULL, 4),
+    (5, '表白墙',   'confession', '本墙发帖前台匿名、评论实名，违规可举报；管理员后台可追溯真实作者', NULL, 5);
 
 -- ---------- 初始标签 ----------
 INSERT INTO `tag` (`id`, `name`) VALUES

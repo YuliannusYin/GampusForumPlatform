@@ -103,5 +103,7 @@ public interface TestDataMapper {
 
     int physicalDeleteFileRecordsByUserIds(@Param("ids") List<Long> ids);
 
+    int physicalDeleteReportsByUserIds(@Param("ids") List<Long> ids);
+
     int physicalDeleteUsersByIds(@Param("ids") List<Long> ids);
 }

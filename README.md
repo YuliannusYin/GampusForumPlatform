@@ -24,6 +24,7 @@ CampusForumPlatform 是一个面向高校师生的校园论坛与社区交流平
 - **用户公开主页**：展示用户公开信息、发帖、评论与社团
 - **用户设置**：通知偏好（评论、点赞、私信）配置
 - **超级管理员**：管理普通管理员账号
+- **匿名表白墙**：表白墙发帖前台强制匿名（接口脱敏）、评论实名、可举报；管理员后台可追溯真实作者并处理违规
 
 ## 系统要求
 
@@ -186,7 +187,7 @@ docker compose up -d --build
 
 ### init.sql 自动执行验证
 
-MySQL 容器首次启动时会自动执行 `docker/init/init.sql`，创建 16 张表与初始数据：
+MySQL 容器首次启动时会自动执行 `docker/init/init.sql`，创建 22 张表与初始数据：
 
 ```bash
 docker exec campus-forum-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "
@@ -200,11 +201,15 @@ SELECT id, username, nickname FROM user;
 ```
 
 预期结果：
-- 16 张表（user / role / user_role / section / post / tag / post_tag / comment / like_record / favorite / notification / chat_session / chat_message / sign_in_record / points_record / file_record）
-- `section_count = 5`（校园生活、学习交流、二手交易、失物招领、表白墙）
+- 22 张表（含 follow / club / club_member / club_post / user_setting / report）
+- `section_count = 5`（校园生活、学习交流、二手交易、失物招领、表白墙；表白墙 `code=confession`）
 - `tag_count = 5`（求助、分享、讨论、公告、经验）
 - `role_count = 2`（ROLE_USER、ROLE_ADMIN）
 - 存在 `admin` 用户（id=1）
+
+> 若 MySQL 数据卷是旧版 init 初始化的，`init.sql` 不会重跑。请执行增量脚本：
+> `docker exec -i campus-forum-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" campus_forum < docker/alter/alter_confession.sql`
+> 本地开发（`root/root`）可直接把该脚本导入 `campus_forum` 库。
 
 ### 数据持久化验证
 

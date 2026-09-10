@@ -140,6 +140,14 @@
         DELETE FROM file_record WHERE user_id IN <include refid="inIds"/>
     </delete>
 
+    <delete id="physicalDeleteReportsByUserIds">
+        DELETE FROM report
+        WHERE reporter_id IN <include refid="inIds"/>
+           OR handler_id IN <include refid="inIds"/>
+           OR (target_type = 1 AND target_id IN (SELECT id FROM post WHERE user_id IN <include refid="inIds"/>))
+           OR (target_type = 2 AND target_id IN (SELECT id FROM comment WHERE user_id IN <include refid="inIds"/>))
+    </delete>
+
     <delete id="physicalDeleteUsersByIds">
         DELETE FROM user WHERE id IN <include refid="inIds"/>
     </delete>

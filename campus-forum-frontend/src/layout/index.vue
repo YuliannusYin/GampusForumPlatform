@@ -109,6 +109,14 @@
               <el-icon><UserFilled /></el-icon>
               <span>社团</span>
             </div>
+            <div
+              class="nav-item"
+              :class="{ active: route.name === 'Wall' }"
+              @click="goWall"
+            >
+              <el-icon><ChatDotRound /></el-icon>
+              <span>表白墙</span>
+            </div>
           </div>
 
           <div class="nav-group" v-if="sections.length">
@@ -118,7 +126,7 @@
               :key="section.id"
               class="nav-item"
               :class="{ active: String(section.id) === activeSection }"
-              @click="handleSectionSelect(section.id)"
+              @click="handleSectionSelect(section)"
             >
               <span class="nav-dot" :style="{ background: getSectionColor(section.id) }"></span>
               <span class="nav-text">{{ section.name }}</span>
@@ -144,7 +152,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Search, Bell, EditPen, ArrowDown, User, Document, Star,
-  Setting, Monitor, SwitchButton, HomeFilled, UserFilled
+  Setting, Monitor, SwitchButton, HomeFilled, UserFilled, ChatDotRound
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { getSections } from '@/api/post'
@@ -159,6 +167,10 @@ const sections = ref([])
 const sidebarCollapsed = ref(false)
 
 const activeSection = computed(() => {
+  if (route.name === 'Wall') {
+    const wall = sections.value.find((item) => item.code === 'confession')
+    return wall ? String(wall.id) : 'wall'
+  }
   if (route.name === 'Section' && route.params.id) {
     return String(route.params.id)
   }
@@ -186,11 +198,16 @@ const handleSearch = () => {
 const goNotification = () => router.push('/message/notification')
 const goCreatePost = () => router.push('/post/create')
 const goClubs = () => router.push('/club')
+const goWall = () => router.push('/wall')
 const goLogin = () => router.push('/login')
 const goRegister = () => router.push('/register')
 
-const handleSectionSelect = (sectionId) => {
-  router.push(`/section/${sectionId}`)
+const handleSectionSelect = (section) => {
+  if (section?.code === 'confession') {
+    router.push('/wall')
+    return
+  }
+  router.push(`/section/${section.id}`)
 }
 
 const fetchSections = async () => {

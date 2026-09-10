@@ -63,7 +63,10 @@ const loadPosts = async () => {
   postsLoading.value = true
   try {
     const res = await getMyPosts({ page: postsPage.current, size: postsPage.size })
-    postsList.value = res.records || []
+    postsList.value = (res.records || []).map((post) => ({
+      ...post,
+      isAuthor: true
+    }))
     postsPage.total = res.total || 0
   } catch (e) {
     // 忽略

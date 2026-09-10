@@ -60,6 +60,9 @@ public class Post implements Serializable {
     /** 是否精华 0否 1是 */
     private Integer isEssence;
 
+    /** 是否匿名 0否 1是 */
+    private Integer isAnonymous;
+
     /** 状态 0已发布 1草稿 2已删除 */
     private Integer status;
 

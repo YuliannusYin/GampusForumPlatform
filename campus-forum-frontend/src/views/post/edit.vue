@@ -57,6 +57,15 @@
             </el-select>
           </el-form-item>
 
+          <el-alert
+            v-if="isConfession"
+            title="发布后前台将隐藏你的身份，评论区仍为实名。违规内容可被举报，管理员后台可追溯。"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="anon-alert"
+          />
+
           <!-- 标签 -->
           <el-form-item label="标签" prop="tagIds">
             <el-select
@@ -129,6 +138,10 @@ const isEdit = computed(() => route.name === 'PostEdit')
 const editId = computed(() => route.params.id)
 // 社团发帖模式：来自路由 query 的 clubId
 const clubId = computed(() => route.query.clubId)
+const isConfession = computed(() => {
+  const selected = sectionOptions.value.find((item) => item.id === form.sectionId)
+  return selected?.code === 'confession'
+})
 
 // 表单引用
 const formRef = ref(null)
@@ -163,6 +176,12 @@ const fetchSections = async () => {
   try {
     const list = await getSections()
     sectionOptions.value = list || []
+    if (!isEdit.value && route.query.anonymous === '1') {
+      const wall = sectionOptions.value.find((item) => item.code === 'confession')
+      if (wall) {
+        form.sectionId = wall.id
+      }
+    }
   } catch (err) {
     // 错误已由 request.js 拦截器统一提示
   }
@@ -293,11 +312,10 @@ onMounted(() => {
 }
 
 /* ===== 社团提示 ===== */
-.club-alert {
+.club-alert,
+.anon-alert {
   margin-bottom: var(--space-4);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-primary-tag-bg);
-  background: var(--color-primary-bg);
 }
 
 /* ===== 页面头部 ===== */

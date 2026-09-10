@@ -22,7 +22,9 @@ import com.campus.forum.mapper.PostTagMapper;
 import com.campus.forum.mapper.SectionMapper;
 import com.campus.forum.mapper.TagMapper;
 import com.campus.forum.mapper.UserMapper;
+import com.campus.forum.security.SecurityUtils;
 import com.campus.forum.service.PostService;
+import com.campus.forum.utils.PostAnonymityHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -94,6 +96,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setFavoriteCount(0);
         post.setIsTop(0);
         post.setIsEssence(0);
+        post.setIsAnonymous(PostAnonymityHelper.resolveAnonymousFlag(section, null));
         post.setStatus(0);
         postMapper.insert(post);
 
@@ -143,6 +146,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setContent(request.getContent());
         post.setSummary(request.getSummary());
         post.setSectionId(request.getSectionId());
+        post.setIsAnonymous(PostAnonymityHelper.resolveAnonymousFlag(section, post.getIsAnonymous()));
         postMapper.updateById(post);
 
         // 更新标签关联（先删旧再插新）
@@ -199,6 +203,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
         // 批量填充标签
         fillTags(result.getRecords());
+        PostAnonymityHelper.applyPublicView(result.getRecords(), SecurityUtils.getCurrentUserIdOrNull());
         return PageResult.of(result);
     }
 
@@ -242,6 +247,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
         // 批量填充标签
         fillTags(result.getRecords());
+        PostAnonymityHelper.applyPublicView(result.getRecords(), SecurityUtils.getCurrentUserIdOrNull());
         return PageResult.of(result);
     }
 
@@ -260,6 +266,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         }
         // 填充标签
         fillTags(Collections.singletonList(vo));
+        PostAnonymityHelper.applyPublicView(vo, SecurityUtils.getCurrentUserIdOrNull());
         return vo;
     }
 

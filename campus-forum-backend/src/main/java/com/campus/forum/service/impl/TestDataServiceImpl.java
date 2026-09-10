@@ -102,7 +102,8 @@ public class TestDataServiceImpl implements TestDataService {
             "校园日常分享", "求助一个学习问题", "推荐一本好书", "今天的心情记录", "期末复习心得",
             "食堂美食测评", "宿舍生活趣事", "社团活动回顾", "编程学习笔记", "电影观后感",
             "运动打卡记录", "旅行见闻分享", "读书笔记整理", "课程选择建议", "校园风景摄影",
-            "考试经验总结", "实习求职经历", "技术分享讨论", "生活小技巧", "周末活动推荐"
+            "考试经验总结", "实习求职经历", "技术分享讨论", "生活小技巧", "周末活动推荐",
+            "想对图书馆那个穿白衬衫的你说", "谢谢那个雨天借伞的同学"
     };
 
     /** 帖子正文 Markdown 模板池（5条），随机组合 2~3 条 */
@@ -282,6 +283,7 @@ public class TestDataServiceImpl implements TestDataService {
         }
 
         if (!testUserIds.isEmpty()) {
+            mapper.physicalDeleteReportsByUserIds(testUserIds);
             result.setComments(mapper.physicalDeleteCommentsByUserIds(testUserIds));
             result.setLikes(mapper.physicalDeleteLikesByUserIds(testUserIds));
             result.setFavorites(mapper.physicalDeleteFavoritesByUserIds(testUserIds));
@@ -503,6 +505,7 @@ public class TestDataServiceImpl implements TestDataService {
             post.setFavoriteCount(0);
             post.setIsTop(random.nextDouble() < 0.05 ? 1 : 0);
             post.setIsEssence(random.nextDouble() < 0.10 ? 1 : 0);
+            post.setIsAnonymous(post.getSectionId() != null && post.getSectionId() == 5L ? 1 : 0);
             post.setStatus(0);
             session.postMapper.insert(post);
             posts.add(post);

@@ -94,7 +94,8 @@ public class UserProfileController {
         // 统计已发布且未删除的发帖数（@TableLogic 自动过滤 deleted=0）
         Long postCount = postMapper.selectCount(new LambdaQueryWrapper<Post>()
                 .eq(Post::getUserId, userId)
-                .eq(Post::getStatus, POST_STATUS_PUBLISHED));
+                .eq(Post::getStatus, POST_STATUS_PUBLISHED)
+                .and(w -> w.eq(Post::getIsAnonymous, 0).or().isNull(Post::getIsAnonymous)));
         vo.setPostCount(postCount == null ? 0L : postCount);
         return Result.success(vo);
     }
@@ -119,6 +120,7 @@ public class UserProfileController {
         IPage<Post> result = postMapper.selectPage(p, new LambdaQueryWrapper<Post>()
                 .eq(Post::getUserId, userId)
                 .eq(Post::getStatus, POST_STATUS_PUBLISHED)
+                .and(w -> w.eq(Post::getIsAnonymous, 0).or().isNull(Post::getIsAnonymous))
                 .orderByDesc(Post::getCreateTime));
         List<PostListVO> vos = buildPostListVOList(result.getRecords());
         return Result.success(new PageResult<>(vos, result.getTotal(), result.getCurrent(), result.getSize()));
@@ -221,6 +223,7 @@ public class UserProfileController {
             vo.setFavoriteCount(post.getFavoriteCount());
             vo.setIsTop(post.getIsTop());
             vo.setIsEssence(post.getIsEssence());
+            vo.setIsAnonymous(post.getIsAnonymous());
             vo.setCreateTime(post.getCreateTime());
             vos.add(vo);
         }

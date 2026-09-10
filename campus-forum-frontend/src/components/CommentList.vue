@@ -21,6 +21,16 @@
               >
                 删除
               </el-button>
+              <el-button
+                v-else-if="allowReport"
+                link
+                type="info"
+                size="small"
+                class="comment-del"
+                @click="openReport(comment)"
+              >
+                举报
+              </el-button>
             </div>
             <!-- Content -->
             <MdPreview :model-value="comment.content" class="comment-content" :preview-only="true" />
@@ -76,6 +86,15 @@
                   <div class="reply-head">
                     <span class="reply-user" @click="goUserProfile(reply.userId)">{{ reply.username }}</span>
                     <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
+                    <el-button
+                      v-if="allowReport && !isOwnComment(reply)"
+                      link
+                      type="info"
+                      size="small"
+                      @click="openReport(reply)"
+                    >
+                      举报
+                    </el-button>
                   </div>
                   <MdPreview :model-value="reply.content" class="reply-content" :preview-only="true" />
                 </div>
@@ -147,6 +166,8 @@
         </el-button>
       </div>
     </div>
+
+    <ReportDialog v-model="reportVisible" :target-type="2" :target-id="reportTargetId" />
   </div>
 </template>
 
@@ -160,11 +181,16 @@ import { useUserStore } from '@/store/user'
 import { formatTime } from '@/utils/format'
 import { getComments, getReplies, createComment, deleteComment } from '@/api/comment'
 import { likeComment } from '@/api/interaction'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const props = defineProps({
   postId: {
     type: [Number, String],
     required: true
+  },
+  allowReport: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -179,6 +205,8 @@ const loading = ref(false)
 
 const newComment = ref('')
 const submitting = ref(false)
+const reportVisible = ref(false)
+const reportTargetId = ref(null)
 
 const replyPageSize = 5
 
@@ -193,6 +221,15 @@ const isOwnComment = (comment) => {
 
 const goUserProfile = (userId) => {
   if (userId) router.push(`/user/${userId}`)
+}
+
+const openReport = (comment) => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再举报')
+    return
+  }
+  reportTargetId.value = comment.id
+  reportVisible.value = true
 }
 
 const fetchComments = async () => {

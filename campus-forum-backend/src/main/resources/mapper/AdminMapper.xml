@@ -32,6 +32,7 @@
             p.favorite_count  AS favoriteCount,
             p.is_top          AS isTop,
             p.is_essence      AS isEssence,
+            p.is_anonymous    AS isAnonymous,
             p.create_time     AS createTime
         FROM post p
         LEFT JOIN user u    ON p.user_id = u.id
